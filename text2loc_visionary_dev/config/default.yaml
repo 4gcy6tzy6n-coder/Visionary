@@ -1,0 +1,23 @@
+# Default configuration for Text2Loc Visionary scaffold
+pipeline:
+  enable_nlu: true
+  enable_vector_search: true
+  enable_api_bridge: false
+  logging_level: INFO
+  max_descriptors: 1000
+
+nlu:
+  model: llm-placeholder
+  prompts:
+    direction:
+      template: "Describe direction in natural language"
+
+vector_search:
+  index_backend: faiss
+  embedding_model: placeholder-model
+  distance_metric: cosine
+  max_batch: 16
+
+logging:
+  file: logs/visionary.log
+  console: true

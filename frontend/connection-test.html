@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>连接测试 - Text2Loc</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            padding: 20px;
+            background: #ffffff;
+            min-height: 100vh;
+            color: #1a1a1a;
+        }
+        .test-card {
+            background: #ffffff;
+            border: 1px solid #e5e5e5;
+            border-radius: 15px;
+            padding: 20px;
+            margin: 10px 0;
+            color: #1a1a1a;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        .test-title {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
+            color: #1a1a1a;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 8px;
+            margin: 5px 0;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .success {
+            background: #e7f7f0;
+            color: #10a37f;
+            border-left: 3px solid #10a37f;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        button {
+            background: #10a37f;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            width: 100%;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        button:hover {
+            background: #0d8a6a;
+        }
+        button:active {
+            background: #0a6b52;
+        }
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #1a1a1a;
+        }
+    </style>
+</head>
+<body>
+    <h1 style="text-align: center;">📱 连接测试工具</h1>
+    
+    <div class="test-card">
+        <div class="test-title">1️⃣ 网络信息</div>
+        <div class="status info" id="networkInfo">检测中...</div>
+    </div>
+    
+    <div class="test-card">
+        <div class="test-title">2️⃣ Mac服务器地址</div>
+        <div class="status info" id="serverAddr">http://192.168.0.108:8080</div>
+    </div>
+    
+    <div class="test-card">
+        <div class="test-title">3️⃣ Health检查</div>
+        <button onclick="testHealth()">测试 /health 接口</button>
+        <div class="status info" id="healthStatus">未测试</div>
+    </div>
+    
+    <div class="test-card">
+        <div class="test-title">4️⃣ API测试</div>
+        <button onclick="testAPI()">测试语音API</button>
+        <div class="status info" id="apiStatus">未测试</div>
+    </div>
+    
+    <div class="test-card">
+        <div class="test-title">5️⃣ 完整测试</div>
+        <button onclick="testFull()">发送测试语音</button>
+        <div class="status info" id="fullStatus">未测试</div>
+    </div>
+    
+    <div class="test-card">
+        <div class="test-title">📋 详细日志</div>
+        <div class="log" id="logArea">等待测试...</div>
+        <button onclick="clearLog()">清空日志</button>
+    </div>
+    
+    <script>
+        const API_BASE = 'http://192.168.0.108:8080';
+        
+        function log(message, type = 'info') {
+            const logArea = document.getElementById('logArea');
+            const timestamp = new Date().toLocaleTimeString();
+            const prefix = type === 'error' ? '❌' : type === 'success' ? '✅' : 'ℹ️';
+            logArea.textContent += `[${timestamp}] ${prefix} ${message}\n`;
+            logArea.scrollTop = logArea.scrollHeight;
+        }
+        
+        function clearLog() {
+            document.getElementById('logArea').textContent = '日志已清空\n';
+        }
+        
+        // 显示网络信息
+        function showNetworkInfo() {
+            const info = document.getElementById('networkInfo');
+            const ua = navigator.userAgent;
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(ua);
+            const device = isMobile ? '📱 移动设备' : '💻 桌面设备';
+            
+            info.innerHTML = `
+                设备类型: ${device}<br>
+                User Agent: ${ua.substring(0, 50)}...<br>
+                当前URL: ${window.location.href}
+            `;
+            
+            log(`设备信息: ${device}`);
+        }
+        
+        // 测试Health接口
+        async function testHealth() {
+            const status = document.getElementById('healthStatus');
+            status.className = 'status info';
+            status.textContent = '正在测试...';
+            
+            log('开始测试 /health 接口');
+            
+            try {
+                const startTime = Date.now();
+                const response = await fetch(`${API_BASE}/health`, {
+                    method: 'GET',
+                    mode: 'cors'
+                });
+                const elapsed = Date.now() - startTime;
+                
+                log(`请求耗时: ${elapsed}ms`);
+                log(`HTTP状态码: ${response.status}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    status.className = 'status success';
+                    status.textContent = `✅ 成功! 状态: ${data.status}, 耗时: ${elapsed}ms`;
+                    log(`响应数据: ${JSON.stringify(data)}`, 'success');
+                } else {
+                    status.className = 'status error';
+                    status.textContent = `❌ 失败! HTTP ${response.status}`;
+                    log(`Health检查失败: HTTP ${response.status}`, 'error');
+                }
+            } catch (e) {
+                status.className = 'status error';
+                status.textContent = `❌ 错误: ${e.message}`;
+                log(`Health检查异常: ${e.message}`, 'error');
+                log(`错误详情: ${e.stack}`, 'error');
+            }
+        }
+        
+        // 测试API接口
+        async function testAPI() {
+            const status = document.getElementById('apiStatus');
+            status.className = 'status info';
+            status.textContent = '正在测试...';
+            
+            log('开始测试 /api/v1/remote-voice 接口');
+            
+            try {
+                const payload = {
+                    text: '测试连接',
+                    timestamp: new Date().toISOString(),
+                    device: 'iPhone',
+                    engine: 'browser'
+                };
+                
+                log(`请求数据: ${JSON.stringify(payload)}`);
+                
+                const startTime = Date.now();
+                const response = await fetch(`${API_BASE}/api/v1/remote-voice`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload),
+                    mode: 'cors'
+                });
+                const elapsed = Date.now() - startTime;
+                
+                log(`请求耗时: ${elapsed}ms`);
+                log(`HTTP状态码: ${response.status}`);
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    status.className = 'status success';
+                    status.textContent = `✅ 成功! 耗时: ${elapsed}ms`;
+                    log(`响应数据: ${JSON.stringify(data, null, 2)}`, 'success');
+                } else {
+                    const text = await response.text();
+                    status.className = 'status error';
+                    status.textContent = `❌ 失败! HTTP ${response.status}`;
+                    log(`API测试失败: HTTP ${response.status}`, 'error');
+                    log(`错误响应: ${text}`, 'error');
+                }
+            } catch (e) {
+                status.className = 'status error';
+                status.textContent = `❌ 错误: ${e.message}`;
+                log(`API测试异常: ${e.message}`, 'error');
+                log(`错误详情: ${e.stack}`, 'error');
+            }
+        }
+        
+        // 完整测试
+        async function testFull() {
+            const status = document.getElementById('fullStatus');
+            status.className = 'status info';
+            status.textContent = '正在测试...';
+            
+            log('开始完整测试流程');
+            
+            try {
+                const payload = {
+                    text: '红色的汽车',
+                    timestamp: new Date().toISOString(),
+                    device: 'iPhone Test',
+                    engine: 'browser'
+                };
+                
+                log(`发送查询: "${payload.text}"`);
+                
+                const startTime = Date.now();
+                const response = await fetch(`${API_BASE}/api/v1/remote-voice`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(payload),
+                    mode: 'cors'
+                });
+                const elapsed = Date.now() - startTime;
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const cellId = data.result?.final_result?.cell_id || 'N/A';
+                    const confidence = data.result?.final_result?.confidence || 0;
+                    
+                    status.className = 'status success';
+                    status.innerHTML = `
+                        ✅ 定位成功!<br>
+                        Cell ID: ${cellId}<br>
+                        置信度: ${(confidence * 100).toFixed(1)}%<br>
+                        耗时: ${elapsed}ms
+                    `;
+                    
+                    log(`定位成功!`, 'success');
+                    log(`Cell ID: ${cellId}`, 'success');
+                    log(`置信度: ${(confidence * 100).toFixed(1)}%`, 'success');
+                    log(`完整响应: ${JSON.stringify(data, null, 2)}`);
+                } else {
+                    status.className = 'status error';
+                    status.textContent = `❌ 失败! HTTP ${response.status}`;
+                    log(`完整测试失败: HTTP ${response.status}`, 'error');
+                }
+            } catch (e) {
+                status.className = 'status error';
+                status.textContent = `❌ 错误: ${e.message}`;
+                log(`完整测试异常: ${e.message}`, 'error');
+                log(`错误类型: ${e.name}`, 'error');
+                log(`错误堆栈: ${e.stack}`, 'error');
+            }
+        }
+        
+        // 页面加载时自动执行
+        window.onload = function() {
+            showNetworkInfo();
+            log('测试工具已加载');
+            log('Mac服务器: ' + API_BASE);
+        };
+    </script>
+</body>
+</html>

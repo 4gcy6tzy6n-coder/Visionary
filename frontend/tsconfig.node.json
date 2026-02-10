@@ -1,0 +1,102 @@
+{
+  "compilerOptions": {
+    /* 基础配置 */
+    "composite": true,
+    "skipLibCheck": true,
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+
+    /* 目标环境 */
+    "target": "ES2022",
+    "lib": ["ES2022"],
+
+    /* 模块解析 */
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "esModuleInterop": true,
+
+    /* 类型检查 */
+    "forceConsistentCasingInFileNames": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+
+    /* 输出配置 */
+    "outDir": "./dist",
+    "rootDir": ".",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+
+    /* Node.js 特定 */
+    "types": ["node"],
+
+    /* 严格模式 */
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "alwaysStrict": true,
+
+    /* 实验性功能 */
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+    /* 路径映射 */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@api/*": ["src/api/*"],
+      "@components/*": ["src/components/*"],
+      "@features/*": ["src/features/*"],
+      "@hooks/*": ["src/hooks/*"],
+      "@stores/*": ["src/stores/*"],
+      "@types/*": ["src/types/*"],
+      "@utils/*": ["src/utils/*"],
+      "@styles/*": ["src/styles/*"],
+      "@assets/*": ["src/assets/*"]
+    }
+  },
+
+  /* 包含的文件 */
+  "include": [
+    "vite.config.ts",
+    "vitest.config.ts",
+    "*.config.ts",
+    "*.config.js",
+    "scripts/**/*.ts",
+    "scripts/**/*.js",
+    "build/**/*.ts",
+    "build/**/*.js",
+    "tools/**/*.ts",
+    "tools/**/*.js",
+    "env.d.ts",
+    "global.d.ts"
+  ],
+
+  /* 排除的文件 */
+  "exclude": [
+    "node_modules",
+    "dist",
+    "src/**/*",           // 排除前端源代码
+    "public",
+    "coverage",
+    ".vscode",
+    ".github",
+    ".husky",
+    ".git",
+    "*.test.ts",
+    "*.spec.ts",
+    "*.test.js",
+    "*.spec.js"
+  ],
+
+  /* 引用配置 */
+  "references": [
+    { "path": "./tsconfig.json" }
+  ]
+}

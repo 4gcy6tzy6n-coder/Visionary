@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>高精度语音识别 - Text2Loc</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 500px;
+            background: #ffffff;
+            border: 1px solid #e5e5e5;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+        
+        .engine-selector {
+            margin-bottom: 30px;
+        }
+        
+        .engine-label {
+            font-size: 14px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 10px;
+            display: block;
+        }
+        
+        .engine-buttons {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+        }
+        
+        .engine-btn {
+            padding: 12px 16px;
+            border: 2px solid #e5e5e5;
+            border-radius: 10px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        .engine-btn:hover {
+            border-color: #10a37f;
+            background: #f0fdf9;
+        }
+        
+        .engine-btn.active {
+            border-color: #10a37f;
+            background: #10a37f;
+            color: white;
+        }
+        
+        .engine-btn .badge {
+            display: inline-block;
+            background: #10a37f;
+            color: white;
+            font-size: 10px;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 5px;
+        }
+        
+        .status-card {
+            background: #f8f9fa;
+            border: 1px solid #e5e5e5;
+            color: #1a1a1a;
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .status-text {
+            font-size: 16px;
+        }
+        
+        .mic-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        
+        .mic-button {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: #10a37f;
+            border: none;
+            cursor: pointer;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(16, 163, 127, 0.3);
+            transition: all 0.3s ease;
+        }
+        
+        .mic-button:hover {
+            transform: scale(1.05);
+        }
+        
+        .mic-button:active {
+            transform: scale(0.95);
+        }
+        
+        .mic-button.listening {
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(16, 163, 127, 0.6); }
+            50% { box-shadow: 0 0 0 20px rgba(16, 163, 127, 0); }
+        }
+        
+        .mic-icon {
+            width: 50px;
+            height: 50px;
+        }
+        
+        .result-box {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 20px;
+            min-height: 120px;
+        }
+        
+        .result-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .result-text {
+            color: #1a1a1a;
+            font-size: 18px;
+            line-height: 1.6;
+            min-height: 60px;
+        }
+        
+        .result-placeholder {
+            color: #999;
+            font-size: 14px;
+        }
+        
+        .confidence-bar {
+            margin-top: 10px;
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #10a37f 0%, #1ea97c 100%);
+            transition: width 0.3s;
+        }
+        
+        .send-btn {
+            width: 100%;
+            padding: 16px;
+            background: #10a37f;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .send-btn:hover {
+            background: #0d8a6a;
+        }
+        
+        .send-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .info-box {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff3cd;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #856404;
+        }
+        
+        .connection-status {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 13px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="title">🎤 高精度语音识别</h1>
+            <p class="subtitle">Text2Loc - 多引擎支持</p>
+        </div>
+        
+        <!-- 引擎选择 -->
+        <div class="engine-selector">
+            <label class="engine-label">选择识别引擎：</label>
+            <div class="engine-buttons">
+                <button class="engine-btn active" data-engine="browser" onclick="selectEngine('browser')">
+                    浏览器原生<span class="badge">免费</span>
+                </button>
+                <button class="engine-btn" data-engine="whisper" onclick="selectEngine('whisper')">
+                    OpenAI Whisper<span class="badge">高精度</span>
+                </button>
+                <button class="engine-btn" data-engine="azure" onclick="selectEngine('azure')">
+                    Azure 语音<span class="badge">企业级</span>
+                </button>
+                <button class="engine-btn" data-engine="aliyun" onclick="selectEngine('aliyun')">
+                    阿里云<span class="badge">推荐</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- 状态卡片 -->
+        <div class="status-card">
+            <p class="status-text" id="status">准备就绪，点击麦克风开始</p>
+        </div>
+        
+        <!-- 麦克风按钮 -->
+        <div class="mic-container">
+            <button class="mic-button" id="micBtn" onclick="toggleVoice()">
+                <svg class="mic-icon" viewBox="0 0 24 24" fill="white" id="micIcon">
+                    <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                    <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+                </svg>
+            </button>
+        </div>
+        
+        <!-- 识别结果 -->
+        <div class="result-box">
+            <div class="result-label">识别结果：</div>
+            <p class="result-text result-placeholder" id="result">识别到的文本将显示在这里...</p>
+            <div class="confidence-bar">
+                <div class="confidence-fill" id="confidenceBar" style="width: 0%"></div>
+            </div>
+        </div>
+        
+        <!-- 发送按钮 -->
+        <button class="send-btn" id="sendBtn" onclick="sendText()" disabled>发送到Mac进行定位</button>
+        
+        <!-- 提示信息 -->
+        <div class="info-box" id="infoBox">
+            <strong>浏览器原生引擎</strong><br>
+            • 完全免费，无需配置<br>
+            • 适用于简单查询<br>
+            • 准确率约80-85%
+        </div>
+    </div>
+    
+    <div class="connection-status" id="connection">连接状态: 检查中...</div>
+    
+    <script>
+        let recognition;
+        let isListening = false;
+        let recognizedText = '';
+        let currentEngine = 'browser';
+        let audioRecorder = null;
+        let audioChunks = [];
+        
+        const MAC_API_URL = 'http://192.168.0.106:5050';
+        
+        // 引擎配置
+        const engineConfigs = {
+            browser: {
+                name: '浏览器原生',
+                info: '完全免费，无需配置<br>适用于简单查询<br>准确率约80-85%',
+                requiresAPI: false
+            },
+            whisper: {
+                name: 'OpenAI Whisper',
+                info: '业界领先的语音识别<br>支持多语言，准确率95%+<br>需要OpenAI API Key',
+                requiresAPI: true,
+                endpoint: '/api/v1/voice/whisper'
+            },
+            azure: {
+                name: 'Azure 语音服务',
+                info: '微软企业级服务<br>低延迟，准确率98%+<br>需要Azure订阅',
+                requiresAPI: true,
+                endpoint: '/api/v1/voice/azure'
+            },
+            aliyun: {
+                name: '阿里云语音',
+                info: '国内推荐，速度快<br>中文准确率97%+<br>需要阿里云API密钥',
+                requiresAPI: true,
+                endpoint: '/api/v1/voice/aliyun'
+            }
+        };
+        
+        // 获取API地址
+        function getApiBaseUrl() {
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            const isLocalhost = window.location.hostname === 'localhost' || 
+                               window.location.hostname === '127.0.0.1';
+            
+            if (!isLocalhost && window.location.protocol === 'https:') {
+                return window.location.origin;
+            }
+            
+            return MAC_API_URL;
+        }
+        
+        // 选择引擎
+        function selectEngine(engine) {
+            currentEngine = engine;
+            
+            // 更新按钮状态
+            document.querySelectorAll('.engine-btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            document.querySelector(`[data-engine="${engine}"]`).classList.add('active');
+            
+            // 更新信息框
+            const config = engineConfigs[engine];
+            document.getElementById('infoBox').innerHTML = `
+                <strong>${config.name}</strong><br>
+                ${config.info}
+            `;
+            
+            updateStatus(`已切换到 ${config.name}`);
+        }
+        
+        // 检查连接
+        async function checkConnection() {
+            const apiBase = getApiBaseUrl();
+            try {
+                const response = await fetch(`${apiBase}/health`);
+                document.getElementById('connection').textContent = '✅ Mac后端已连接';
+                return true;
+            } catch (e) {
+                document.getElementById('connection').textContent = '❌ 无法连接Mac后端';
+                return false;
+            }
+        }
+        
+        // 切换语音识别
+        function toggleVoice() {
+            if (isListening) {
+                stopListening();
+            } else {
+                startListening();
+            }
+        }
+        
+        // 开始录音
+        async function startListening() {
+            if (currentEngine === 'browser') {
+                startBrowserRecognition();
+            } else {
+                await startAudioRecording();
+            }
+        }
+        
+        // 停止录音
+        function stopListening() {
+            if (currentEngine === 'browser') {
+                stopBrowserRecognition();
+            } else {
+                stopAudioRecording();
+            }
+        }
+        
+        // 浏览器原生识别
+        function startBrowserRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            if (!SpeechRecognition) {
+                updateStatus('❌ 浏览器不支持语音识别');
+                return;
+            }
+            
+            if (!recognition) {
+                recognition = new SpeechRecognition();
+                recognition.continuous = false;
+                recognition.interimResults = true;
+                recognition.lang = 'zh-CN';
+                recognition.maxAlternatives = 3;
+                
+                recognition.onstart = () => {
+                    isListening = true;
+                    document.getElementById('micBtn').classList.add('listening');
+                    updateStatus('🎤 正在聆听...请说话');
+                };
+                
+                recognition.onresult = (event) => {
+                    let interim = '';
+                    let final = '';
+                    let confidence = 0;
+                    
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        const result = event.results[i];
+                        const transcript = result[0].transcript;
+                        confidence = result[0].confidence;
+                        
+                        if (result.isFinal) {
+                            final += transcript;
+                        } else {
+                            interim += transcript;
+                        }
+                    }
+                    
+                    if (final) {
+                        recognizedText = final;
+                        displayResult(final, confidence);
+                        updateStatus('✅ 识别完成');
+                        document.getElementById('sendBtn').disabled = false;
+                    } else if (interim) {
+                        displayResult(interim + '...', 0);
+                    }
+                };
+                
+                recognition.onerror = (event) => {
+                    console.error('识别错误:', event.error);
+                    if (event.error !== 'no-speech') {
+                        updateStatus('❌ 识别错误: ' + event.error);
+                    }
+                    stopBrowserRecognition();
+                };
+                
+                recognition.onend = () => {
+                    stopBrowserRecognition();
+                };
+            }
+            
+            try {
+                recognition.start();
+            } catch (e) {
+                console.error('启动失败:', e);
+                updateStatus('❌ 启动失败');
+            }
+        }
+        
+        function stopBrowserRecognition() {
+            isListening = false;
+            if (recognition) {
+                recognition.stop();
+            }
+            document.getElementById('micBtn').classList.remove('listening');
+        }
+        
+        // 音频录制（用于云端识别）
+        async function startAudioRecording() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                audioRecorder = new MediaRecorder(stream);
+                audioChunks = [];
+                
+                audioRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
+                
+                audioRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                    await sendAudioForRecognition(audioBlob);
+                    stream.getTracks().forEach(track => track.stop());
+                };
+                
+                audioRecorder.start();
+                isListening = true;
+                document.getElementById('micBtn').classList.add('listening');
+                updateStatus('🎤 正在录音...（点击停止）');
+                
+            } catch (e) {
+                console.error('录音失败:', e);
+                updateStatus('❌ 无法访问麦克风');
+            }
+        }
+        
+        function stopAudioRecording() {
+            if (audioRecorder && audioRecorder.state !== 'inactive') {
+                audioRecorder.stop();
+                isListening = false;
+                document.getElementById('micBtn').classList.remove('listening');
+                updateStatus('⏳ 正在识别...');
+            }
+        }
+        
+        // 发送音频到云端识别
+        async function sendAudioForRecognition(audioBlob) {
+            const apiBase = getApiBaseUrl();
+            const config = engineConfigs[currentEngine];
+            
+            updateStatus('⏳ 正在识别...');
+            
+            try {
+                const formData = new FormData();
+                formData.append('audio', audioBlob);
+                formData.append('engine', currentEngine);
+                
+                const response = await fetch(`${apiBase}${config.endpoint}`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    recognizedText = data.text;
+                    displayResult(data.text, data.confidence || 0.9);
+                    updateStatus('✅ 识别完成');
+                    document.getElementById('sendBtn').disabled = false;
+                } else {
+                    updateStatus('❌ 识别失败');
+                }
+            } catch (e) {
+                console.error('识别请求失败:', e);
+                updateStatus('❌ 识别服务不可用');
+            }
+        }
+        
+        // 显示结果
+        function displayResult(text, confidence) {
+            const resultEl = document.getElementById('result');
+            resultEl.textContent = text;
+            resultEl.classList.remove('result-placeholder');
+            
+            const confidenceBar = document.getElementById('confidenceBar');
+            confidenceBar.style.width = (confidence * 100) + '%';
+        }
+        
+        // 更新状态
+        function updateStatus(text) {
+            document.getElementById('status').textContent = text;
+        }
+        
+        // 发送文本到Mac
+        async function sendText() {
+            if (!recognizedText.trim()) {
+                updateStatus('⚠️ 没有可发送的文本');
+                return;
+            }
+            
+            const apiBase = getApiBaseUrl();
+            updateStatus('📡 正在发送...');
+            
+            try {
+                const response = await fetch(`${apiBase}/api/v1/remote-voice`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: recognizedText,
+                        timestamp: new Date().toISOString(),
+                        device: 'iPhone',
+                        engine: currentEngine
+                    })
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    const cellId = result.result?.final_result?.cell_id || '处理中';
+                    const confidence = result.result?.final_result?.confidence || 0;
+                    updateStatus(`✅ 定位成功!\nCell: ${cellId}\n置信度: ${(confidence*100).toFixed(1)}%`);
+                } else {
+                    updateStatus('❌ 发送失败，请重试');
+                }
+            } catch (e) {
+                console.error('发送失败:', e);
+                updateStatus('❌ 无法连接到Mac');
+            }
+        }
+        
+        // 页面加载时检查连接
+        window.onload = function() {
+            checkConnection();
+        };
+    </script>
+</body>
+</html>

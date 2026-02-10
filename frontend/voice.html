@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text2Loc - 智能语音定位系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            color: #1a1a1a;
+            line-height: 1.6;
+        }
+
+        /* 顶部导航 */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: #ffffff;
+            border-bottom: 1px solid #e5e5e5;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 100;
+        }
+
+        .navbar-brand {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1a1a1a;
+            text-decoration: none;
+        }
+
+        .navbar-nav {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav-link {
+            padding: 8px 16px;
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover {
+            background: #f5f5f5;
+            color: #1a1a1a;
+        }
+
+        .nav-link.active {
+            background: #f0f0f0;
+            color: #1a1a1a;
+            font-weight: 500;
+        }
+
+        /* 模型状态指示器 */
+        .model-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: #f8f9fa;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .model-badge .indicator {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #10a37f;
+        }
+
+        .model-badge .indicator.offline {
+            background: #dc3545;
+        }
+
+        /* 主内容区 */
+        .main-container {
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 100px 24px 40px;
+        }
+
+        /* 页面标题 */
+        .page-header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .page-header h1 {
+            font-size: 32px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 12px;
+        }
+
+        .page-header p {
+            font-size: 16px;
+            color: #666;
+        }
+
+        /* 语音交互区域 */
+        .voice-section {
+            background: #ffffff;
+            border: 1px solid #e5e5e5;
+            border-radius: 12px;
+            padding: 32px;
+            margin-bottom: 32px;
+        }
+
+        /* 语音按钮 */
+        .voice-button-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .voice-button {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            border: none;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 48px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .voice-button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 15px 40px rgba(102, 126, 234, 0.5);
+        }
+
+        .voice-button:active {
+            transform: scale(0.95);
+        }
+
+        .voice-button.listening {
+            animation: voicePulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes voicePulse {
+            0%, 100% {
+                box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+            }
+            50% {
+                box-shadow: 0 10px 50px rgba(102, 126, 234, 0.8), 0 0 0 20px rgba(102, 126, 234, 0.1);
+            }
+        }
+
+        .voice-button::before {
+            content: '';
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: inherit;
+            opacity: 0;
+            transform: scale(1);
+            transition: all 0.3s ease;
+        }
+
+        .voice-button.listening::before {
+            animation: ripple 1.5s ease-out infinite;
+        }
+
+        @keyframes ripple {
+            0% {
+                opacity: 0.5;
+                transform: scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: scale(1.5);
+            }
+        }
+
+        .voice-status {
+            font-size: 16px;
+            color: #666;
+            font-weight: 500;
+        }
+
+        .voice-status.listening {
+            color: #667eea;
+        }
+
+        /* 语音识别结果显示 */
+        .voice-result {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 24px;
+            min-height: 80px;
+            border: 2px solid transparent;
+            transition: all 0.3s ease;
+        }
+
+        .voice-result.has-content {
+            border-color: #667eea;
+            background: #f6f7ff;
+        }
+
+        .voice-result-label {
+            font-size: 12px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .voice-result-text {
+            font-size: 18px;
+            color: #1a1a1a;
+            line-height: 1.6;
+            min-height: 30px;
+        }
+
+        .voice-result-text.placeholder {
+            color: #999;
+            font-style: italic;
+        }
+
+        /* 语言选择 */
+        .language-selector {
+            display: flex;
+            gap: 12px;
+            justify-content: center;
+            margin-bottom: 24px;
+        }
+
+        .language-btn {
+            padding: 8px 16px;
+            border: 2px solid #e5e5e5;
+            background: white;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .language-btn:hover {
+            border-color: #667eea;
+        }
+
+        .language-btn.active {
+            border-color: #667eea;
+            background: #667eea;
+            color: white;
+        }
+
+        /* 选项区域 */
+        .options-row {
+            display: flex;
+            gap: 24px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #f0f0f0;
+            justify-content: center;
+        }
+
+        .option-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .option-group label {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .option-group input[type="number"] {
+            width: 60px;
+            padding: 6px 10px;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .option-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #667eea;
+        }
+
+        /* 提交按钮 */
+        .submit-btn {
+            width: 100%;
+            padding: 16px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        /* 加载状态 */
+        .loading-section {
+            display: none;
+            text-align: center;
+            padding: 48px 24px;
+        }
+
+        .loading-section.active {
+            display: block;
+        }
+
+        .loading-spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #f0f0f0;
+            border-top-color: #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* 结果区域 */
+        .results-section {
+            display: none;
+            margin-top: 32px;
+        }
+
+        .results-section.active {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 20px;
+            padding-bottom: 12px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        /* 查询分析卡片 */
+        .analysis-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .analysis-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 12px 0;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        .analysis-item:last-child {
+            border-bottom: none;
+        }
+
+        .analysis-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .analysis-value {
+            font-weight: 600;
+            color: #1a1a1a;
+            font-size: 14px;
+        }
+
+        /* 结果列表 */
+        .result-list {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .result-item {
+            background: white;
+            border: 2px solid #e5e5e5;
+            border-radius: 12px;
+            padding: 24px;
+            transition: all 0.3s ease;
+        }
+
+        .result-item:hover {
+            border-color: #667eea;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            transform: translateY(-2px);
+        }
+
+        .result-item.top-result {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #f6f7ff 0%, #ffffff 100%);
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .result-rank {
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            background: #f0f0f0;
+            padding: 4px 12px;
+            border-radius: 20px;
+        }
+
+        .result-item.top-result .result-rank {
+            color: white;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+
+        .result-score {
+            font-size: 18px;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .result-description {
+            font-size: 15px;
+            color: #666;
+            line-height: 1.7;
+            margin: 12px 0;
+        }
+
+        .result-coordinates {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 12px 0;
+            font-size: 14px;
+        }
+
+        .coord-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .coord-value {
+            color: #1a1a1a;
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            background: #f5f5f5;
+            padding: 4px 12px;
+            border-radius: 6px;
+        }
+
+        .result-reference {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 12px;
+            font-size: 13px;
+            color: #888;
+        }
+
+        /* 快捷指令 */
+        .quick-commands {
+            background: #ffffff;
+            border: 1px solid #e5e5e5;
+            border-radius: 12px;
+            padding: 24px;
+        }
+
+        .quick-commands h3 {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: #1a1a1a;
+        }
+
+        .command-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .command-tag {
+            padding: 10px 18px;
+            background: #f8f9fa;
+            border: 1px solid #e5e5e5;
+            border-radius: 20px;
+            font-size: 14px;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .command-tag:hover {
+            background: #667eea;
+            color: white;
+            border-color: #667eea;
+        }
+
+        /* 错误提示 */
+        .error-message {
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #c33;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .error-message.active {
+            display: block;
+        }
+
+        /* 页脚 */
+        .footer {
+            text-align: center;
+            padding: 40px 24px;
+            color: #999;
+            font-size: 13px;
+            border-top: 1px solid #f0f0f0;
+            margin-top: 60px;
+        }
+
+        /* 响应式 */
+        @media (max-width: 768px) {
+            .main-container {
+                padding: 80px 16px 24px;
+            }
+
+            .page-header h1 {
+                font-size: 28px;
+            }
+
+            .voice-section {
+                padding: 24px;
+            }
+
+            .voice-button {
+                width: 100px;
+                height: 100px;
+                font-size: 40px;
+            }
+
+            .options-row {
+                flex-direction: column;
+                gap: 12px;
+            }
+        }
+
+        /* 语音识别波形动画 */
+        .voice-wave {
+            display: none;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            height: 40px;
+            margin-top: 16px;
+        }
+
+        .voice-wave.active {
+            display: flex;
+        }
+
+        .voice-wave-bar {
+            width: 4px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 2px;
+            animation: wave 1s ease-in-out infinite;
+        }
+
+        .voice-wave-bar:nth-child(1) { animation-delay: 0s; height: 20%; }
+        .voice-wave-bar:nth-child(2) { animation-delay: 0.1s; height: 40%; }
+        .voice-wave-bar:nth-child(3) { animation-delay: 0.2s; height: 60%; }
+        .voice-wave-bar:nth-child(4) { animation-delay: 0.3s; height: 40%; }
+        .voice-wave-bar:nth-child(5) { animation-delay: 0.4s; height: 20%; }
+
+        @keyframes wave {
+            0%, 100% { transform: scaleY(0.5); }
+            50% { transform: scaleY(1); }
+        }
+    </style>
+</head>
+<body>
+    <!-- 顶部导航 -->
+    <nav class="navbar">
+        <a href="./index.html" class="navbar-brand">Text2Loc</a>
+        <div class="model-badge">
+            <div class="indicator" id="modelIndicator"></div>
+            <span id="modelName">检查中...</span>
+        </div>
+        <div class="navbar-nav">
+            <a href="./index.html" class="nav-link">文本版</a>
+            <a href="./voice.html" class="nav-link active">语音版</a>
+            <a href="./config.html" class="nav-link">配置</a>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <div class="main-container">
+        <!-- 页面标题 -->
+        <div class="page-header">
+            <h1>🎙️ 智能语音定位</h1>
+            <p>点击麦克风按钮，用普通话描述您要查找的位置</p>
+        </div>
+
+        <!-- 错误提示 -->
+        <div class="error-message" id="errorMessage"></div>
+
+        <!-- 语音交互区域 -->
+        <div class="voice-section">
+            <!-- 语言选择 -->
+            <div class="language-selector">
+                <button class="language-btn active" data-lang="zh-CN">
+                    🇨🇳 普通话
+                </button>
+                <button class="language-btn" data-lang="en-US">
+                    🇺🇸 English
+                </button>
+            </div>
+
+            <!-- 语音按钮 -->
+            <div class="voice-button-container">
+                <button class="voice-button" id="voiceButton" title="点击开始语音输入">
+                    🎤
+                </button>
+                <div class="voice-status" id="voiceStatus">点击麦克风开始说话</div>
+                
+                <!-- 语音识别波形 -->
+                <div class="voice-wave" id="voiceWave">
+                    <div class="voice-wave-bar"></div>
+                    <div class="voice-wave-bar"></div>
+                    <div class="voice-wave-bar"></div>
+                    <div class="voice-wave-bar"></div>
+                    <div class="voice-wave-bar"></div>
+                </div>
+            </div>
+
+            <!-- 语音识别结果 -->
+            <div class="voice-result" id="voiceResult">
+                <div class="voice-result-label">识别结果</div>
+                <div class="voice-result-text placeholder" id="voiceResultText">
+                    语音输入的内容将显示在这里...
+                </div>
+            </div>
+
+            <!-- 选项 -->
+            <div class="options-row">
+                <div class="option-group">
+                    <label for="topK">返回结果数:</label>
+                    <input type="number" id="topK" value="5" min="1" max="10">
+                </div>
+                <div class="option-group">
+                    <input type="checkbox" id="enableEnhanced" checked>
+                    <label for="enableEnhanced">启用增强模式</label>
+                </div>
+                <div class="option-group">
+                    <input type="checkbox" id="returnDebug">
+                    <label for="returnDebug">显示调试信息</label>
+                </div>
+            </div>
+
+            <!-- 提交按钮 -->
+            <button class="submit-btn" id="submitBtn" disabled>
+                <span>🔍</span>
+                <span>开始定位</span>
+            </button>
+        </div>
+
+        <!-- 加载状态 -->
+        <div class="loading-section" id="loadingSection">
+            <div class="loading-spinner"></div>
+            <div class="loading-text">正在处理语音查询...</div>
+        </div>
+
+        <!-- 结果区域 -->
+        <div class="results-section" id="resultsSection">
+            <div class="section-title">📊 查询分析</div>
+            <div class="analysis-card" id="analysisCard">
+                <!-- 动态填充 -->
+            </div>
+
+            <div class="section-title">🎯 定位结果</div>
+            <div class="result-list" id="resultList">
+                <!-- 动态填充 -->
+            </div>
+        </div>
+
+        <!-- 快捷指令 -->
+        <div class="quick-commands">
+            <h3>💡 试试这些语音指令</h3>
+            <div class="command-tags">
+                <span class="command-tag" data-text="找到红色的汽车">找到红色的汽车</span>
+                <span class="command-tag" data-text="在建筑物左侧的树">在建筑物左侧的树</span>
+                <span class="command-tag" data-text="距离入口10米的地方">距离入口10米的地方</span>
+                <span class="command-tag" data-text="蓝色的椅子">蓝色的椅子</span>
+                <span class="command-tag" data-text="在停车场入口附近">在停车场入口附近</span>
+                <span class="command-tag" data-text="找到白色的建筑物">找到白色的建筑物</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        Text2Loc Visionary &copy; 2024
+    </footer>
+
+    <script>
+        // 智能检测API地址
+        function getApiBaseUrl() {
+            const hostname = window.location.hostname;
+            const port = window.location.port;
+            
+            // 如果是localhost或127.0.0.1，直接使用5050端口
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                return 'http://localhost:5050';
+            }
+            
+            // 如果是iPhone通过内网IP访问，使用相同IP不同端口
+            if (hostname.match(/^192\.168\./) || hostname.match(/^10\./)) {
+                return `http://${hostname}:5050`;
+            }
+            
+            // 其他情况，使用当前域名
+            return window.location.origin;
+        }
+        
+        // API配置
+        const API_BASE_URL = getApiBaseUrl();
+        console.log('🔌 API地址:', API_BASE_URL);
+
+        // DOM元素
+        const voiceButton = document.getElementById('voiceButton');
+        const voiceStatus = document.getElementById('voiceStatus');
+        const voiceWave = document.getElementById('voiceWave');
+        const voiceResult = document.getElementById('voiceResult');
+        const voiceResultText = document.getElementById('voiceResultText');
+        const submitBtn = document.getElementById('submitBtn');
+        const loadingSection = document.getElementById('loadingSection');
+        const resultsSection = document.getElementById('resultsSection');
+        const errorMessage = document.getElementById('errorMessage');
+        const modelIndicator = document.getElementById('modelIndicator');
+        const modelName = document.getElementById('modelName');
+
+        // 语音识别相关
+        let recognition = null;
+        let isListening = false;
+        let currentLanguage = 'zh-CN';
+        let recognizedText = '';
+        let permissionGranted = false;  // 添加权限状态跟踪
+
+        // 检查和请求麦克风权限
+        async function checkMicrophonePermission() {
+            try {
+                // 先检查 Permissions API 支持
+                if (navigator.permissions && navigator.permissions.query) {
+                    try {
+                        const result = await navigator.permissions.query({ name: 'microphone' });
+                        
+                        if (result.state === 'granted') {
+                            permissionGranted = true;
+                            return true;
+                        } else if (result.state === 'denied') {
+                            showError('麦克风权限已被拒绝，请在浏览器设置中允许访问麦克风');
+                            return false;
+                        }
+                    } catch (permError) {
+                        // Permissions API 不支持麦克风查询，继续使用 getUserMedia
+                        console.log('Permissions API 不支持麦克风查询，尝试直接请求');
+                    }
+                }
+                
+                // 直接尝试请求麦克风权限
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                
+                // 权限获取成功
+                permissionGranted = true;
+                
+                // 立即停止所有轨道（释放资源）
+                stream.getTracks().forEach(track => track.stop());
+                
+                return true;
+            } catch (error) {
+                console.error('麦克风权限检查失败:', error);
+                
+                // 根据错误类型显示不同提示
+                if (error.name === 'NotAllowedError') {
+                    showError('麦克风权限被拒绝，请点击浏览器地址栏左侧的锁图标，允许麦克风访问');
+                } else if (error.name === 'NotFoundError') {
+                    showError('未检测到麦克风设备，请确保已连接麦克风');
+                } else if (error.name === 'NotReadableError') {
+                    showError('麦克风设备被占用，请关闭其他使用麦克风的应用');
+                } else {
+                    showError('无法访问麦克风: ' + error.message);
+                }
+                
+                permissionGranted = false;
+                return false;
+            }
+        }
+
+        // 初始化语音识别
+        function initSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            if (!SpeechRecognition) {
+                showError('您的浏览器不支持语音识别功能，请使用 Chrome、Edge 或 Safari 浏览器');
+                voiceButton.disabled = true;
+                return false;
+            }
+
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            recognition.lang = currentLanguage;
+
+            recognition.onstart = () => {
+                isListening = true;
+                voiceButton.classList.add('listening');
+                voiceStatus.textContent = '正在聆听...';
+                voiceStatus.classList.add('listening');
+                voiceWave.classList.add('active');
+                voiceResult.classList.remove('has-content');
+                errorMessage.classList.remove('active');  // 清除错误提示
+            };
+
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+
+                if (finalTranscript) {
+                    recognizedText = finalTranscript;
+                    voiceResultText.textContent = recognizedText;
+                    voiceResultText.classList.remove('placeholder');
+                    voiceResult.classList.add('has-content');
+                    submitBtn.disabled = false;
+                } else if (interimTranscript) {
+                    voiceResultText.textContent = interimTranscript;
+                    voiceResultText.classList.remove('placeholder');
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error('语音识别错误:', event.error);
+                let errorMsg = '语音识别出错';
+                
+                switch(event.error) {
+                    case 'no-speech':
+                        errorMsg = '未检测到语音，请重试';
+                        break;
+                    case 'audio-capture':
+                        errorMsg = '无法访问麦克风，请检查设备连接';
+                        permissionGranted = false;  // 重置权限状态
+                        break;
+                    case 'not-allowed':
+                        errorMsg = '麦克风权限被拒绝，请点击浏览器地址栏左侧的图标允许访问';
+                        permissionGranted = false;  // 重置权限状态
+                        break;
+                    case 'network':
+                        errorMsg = '网络错误，请检查网络连接';
+                        break;
+                    case 'aborted':
+                        errorMsg = '语音识别被中断';
+                        break;
+                    case 'service-not-allowed':
+                        errorMsg = '语音服务不可用，请检查浏览器设置';
+                        break;
+                    default:
+                        errorMsg = `语音识别错误: ${event.error}`;
+                }
+                
+                showError(errorMsg);
+                stopListening();
+            };
+
+            recognition.onend = () => {
+                stopListening();
+            };
+
+            return true;
+        }
+
+        // 停止语音识别
+        function stopListening() {
+            isListening = false;
+            voiceButton.classList.remove('listening');
+            voiceStatus.textContent = '点击麦克风开始说话';
+            voiceStatus.classList.remove('listening');
+            voiceWave.classList.remove('active');
+            
+            if (recognition) {
+                recognition.stop();
+            }
+        }
+
+        // 切换语音识别状态 - 增强权限检查
+        async function toggleVoiceRecognition() {
+            if (!recognition) {
+                if (!initSpeechRecognition()) return;
+            }
+
+            if (isListening) {
+                recognition.stop();
+            } else {
+                // 先检查权限状态
+                if (!permissionGranted) {
+                    const granted = await checkMicrophonePermission();
+                    if (!granted) {
+                        return;
+                    }
+                }
+                
+                try {
+                    // 再次请求麦克风访问(确保权限有效)
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    
+                    // 立即释放
+                    stream.getTracks().forEach(track => track.stop());
+                    
+                    // 权限确认无误，清除错误提示
+                    errorMessage.classList.remove('active');
+                    
+                    // 设置语言并启动识别
+                    recognition.lang = currentLanguage;
+                    recognition.start();
+                    
+                } catch (err) {
+                    console.error('麦克风访问失败:', err);
+                    
+                    // 根据错误类型显示详细提示
+                    if (err.name === 'NotAllowedError') {
+                        showError('麦克风权限被拒绝。请点击浏览器地址栏左侧的图标，选择“网站设置”，允许麦克风访问。');
+                    } else if (err.name === 'NotFoundError') {
+                        showError('未检测到麦克风设备。请确保麦克风已正确连接到您的设备。');
+                    } else {
+                        showError('无法访问麦克风，请检查权限设置: ' + err.message);
+                    }
+                    
+                    permissionGranted = false;
+                }
+            }
+        }
+
+        // 显示错误信息
+        function showError(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.add('active');
+            setTimeout(() => {
+                errorMessage.classList.remove('active');
+            }, 5000);
+        }
+
+        // 提交查询
+        async function submitQuery() {
+            if (!recognizedText.trim()) {
+                showError('请先输入查询内容');
+                return;
+            }
+
+            const topK = parseInt(document.getElementById('topK').value) || 5;
+            const enableEnhanced = document.getElementById('enableEnhanced').checked;
+            const returnDebug = document.getElementById('returnDebug').checked;
+
+            loadingSection.classList.add('active');
+            resultsSection.classList.remove('active');
+            submitBtn.disabled = true;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/v1/query`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        query: recognizedText,
+                        top_k: topK,
+                        enable_enhanced: enableEnhanced,
+                        return_debug_info: returnDebug
+                    })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                displayResults(data);
+            } catch (error) {
+                console.error('查询失败:', error);
+                showError('查询失败: ' + error.message);
+            } finally {
+                loadingSection.classList.remove('active');
+                submitBtn.disabled = false;
+            }
+        }
+
+        // 显示结果
+        function displayResults(data) {
+            // 显示分析结果
+            const analysisCard = document.getElementById('analysisCard');
+            if (data.parsing_details) {
+                const details = data.parsing_details;
+                analysisCard.innerHTML = `
+                    <div class="analysis-item">
+                        <span class="analysis-label">查询文本</span>
+                        <span class="analysis-value">${data.query || recognizedText}</span>
+                    </div>
+                    <div class="analysis-item">
+                        <span class="analysis-label">解析模式</span>
+                        <span class="analysis-value">${data.mode === 'enhanced' ? '增强模式' : '传统模式'}</span>
+                    </div>
+                    <div class="analysis-item">
+                        <span class="analysis-label">处理时间</span>
+                        <span class="analysis-value">${(data.processing_time_ms / 1000).toFixed(2)}s</span>
+                    </div>
+                    <div class="analysis-item">
+                        <span class="analysis-label">识别方向</span>
+                        <span class="analysis-value">${details.directions?.length || 0} 个</span>
+                    </div>
+                    <div class="analysis-item">
+                        <span class="analysis-label">识别颜色</span>
+                        <span class="analysis-value">${details.colors?.length || 0} 个</span>
+                    </div>
+                    <div class="analysis-item">
+                        <span class="analysis-label">识别对象</span>
+                        <span class="analysis-value">${details.objects?.length || 0} 个</span>
+                    </div>
+                `;
+            } else {
+                analysisCard.innerHTML = `
+                    <div class="analysis-item">
+                        <span class="analysis-label">查询文本</span>
+                        <span class="analysis-value">${data.query || recognizedText}</span>
+                    </div>
+                    <div class="analysis-item">
+                        <span class="analysis-label">处理时间</span>
+                        <span class="analysis-value">${(data.processing_time_ms / 1000).toFixed(2)}s</span>
+                    </div>
+                `;
+            }
+
+            // 显示定位结果
+            const resultList = document.getElementById('resultList');
+            if (data.results && data.results.length > 0) {
+                resultList.innerHTML = data.results.map((result, index) => `
+                    <div class="result-item ${index === 0 ? 'top-result' : ''}">
+                        <div class="result-header">
+                            <span class="result-rank">#${index + 1}</span>
+                            <span class="result-score">${(result.score * 100).toFixed(1)}%</span>
+                        </div>
+                        <div class="result-description">${result.description || '未提供描述'}</div>
+                        <div class="result-coordinates">
+                            <span class="coord-label">坐标:</span>
+                            <span class="coord-value">${result.coordinates ? 
+                                `(${result.coordinates[0].toFixed(2)}, ${result.coordinates[1].toFixed(2)}, ${result.coordinates[2].toFixed(2)})` : 
+                                'N/A'}</span>
+                        </div>
+                        ${result.cell_id ? `
+                        <div class="result-reference">
+                            <span class="ref-label">单元格:</span>
+                            <span class="ref-value">${result.cell_id}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                `).join('');
+            } else {
+                resultList.innerHTML = '<div class="result-item"><div class="result-description">未找到匹配的位置</div></div>';
+            }
+
+            resultsSection.classList.add('active');
+            resultsSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // 检查模型状态
+        async function checkModelStatus() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/v1/config`);
+                if (response.ok) {
+                    const data = await response.json();
+                    if (data.is_configured) {
+                        modelIndicator.classList.remove('offline');
+                        modelName.textContent = data.model || '已配置';
+                    } else {
+                        modelIndicator.classList.add('offline');
+                        modelName.textContent = '未配置';
+                    }
+                } else {
+                    modelIndicator.classList.add('offline');
+                    modelName.textContent = '离线';
+                }
+            } catch (error) {
+                modelIndicator.classList.add('offline');
+                modelName.textContent = '离线';
+            }
+        }
+
+        // 语言切换
+        document.querySelectorAll('.language-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                document.querySelectorAll('.language-btn').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                currentLanguage = btn.dataset.lang;
+                
+                // 更新语音识别语言
+                if (recognition) {
+                    recognition.lang = currentLanguage;
+                }
+                
+                // 更新提示文本
+                if (currentLanguage === 'zh-CN') {
+                    voiceStatus.textContent = '点击麦克风开始说话';
+                    document.querySelector('.page-header p').textContent = '点击麦克风按钮，用普通话描述您要查找的位置';
+                } else {
+                    voiceStatus.textContent = 'Click microphone to speak';
+                    document.querySelector('.page-header p').textContent = 'Click the microphone button and describe the location you want to find';
+                }
+            });
+        });
+
+        // 快捷指令点击
+        document.querySelectorAll('.command-tag').forEach(tag => {
+            tag.addEventListener('click', () => {
+                recognizedText = tag.dataset.text;
+                voiceResultText.textContent = recognizedText;
+                voiceResultText.classList.remove('placeholder');
+                voiceResult.classList.add('has-content');
+                submitBtn.disabled = false;
+            });
+        });
+
+        // 事件监听
+        voiceButton.addEventListener('click', toggleVoiceRecognition);
+        submitBtn.addEventListener('click', submitQuery);
+
+        // 键盘快捷键
+        document.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && e.target === document.body) {
+                e.preventDefault();
+                toggleVoiceRecognition();
+            }
+            if (e.code === 'Enter' && e.ctrlKey) {
+                submitQuery();
+            }
+        });
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', async () => {
+            initSpeechRecognition();
+            checkModelStatus();
+            
+            // 页面加载时检查麦克风权限
+            await checkMicrophonePermission();
+            
+            // 定期检查模型状态
+            setInterval(checkModelStatus, 30000);
+        });
+    </script>
+</body>
+</html>

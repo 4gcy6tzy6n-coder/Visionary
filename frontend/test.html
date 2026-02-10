@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text2Loc 测试页面</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-result {
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+        }
+        .pending {
+            background: #fff3cd;
+            border: 1px solid #ffeeba;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+        pre {
+            background: #f4f4f4;
+            padding: 10px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Text2Loc 前端测试</h1>
+    
+    <div id="results"></div>
+    
+    <button onclick="runTests()">🔄 重新运行测试</button>
+    
+    <script>
+        const API_BASE_URL = window.location.origin.includes(':6001') 
+            ? 'http://localhost:8088' 
+            : window.location.origin;
+        
+        console.log('API Base URL:', API_BASE_URL);
+        
+        function addResult(title, success, message, details = null) {
+            const resultsDiv = document.getElementById('results');
+            const div = document.createElement('div');
+            div.className = `test-result ${success ? 'success' : 'error'}`;
+            div.innerHTML = `<strong>${success ? '✅' : '❌'} ${title}</strong><br>${message}`;
+            if (details) {
+                div.innerHTML += `<pre>${JSON.stringify(details, null, 2)}</pre>`;
+            }
+            resultsDiv.appendChild(div);
+        }
+        
+        async function runTests() {
+            document.getElementById('results').innerHTML = '';
+            
+            addResult('测试配置', true, `API地址: ${API_BASE_URL}`);
+            
+            // 测试1: 健康检查
+            try {
+                const healthRes = await fetch(`${API_BASE_URL}/health`);
+                const healthData = await healthRes.json();
+                addResult('健康检查', healthData.status === 'healthy', healthData.status, healthData);
+            } catch (e) {
+                addResult('健康检查', false, `连接失败: ${e.message}`);
+            }
+            
+            // 测试2: 查询处理
+            try {
+                const queryRes = await fetch(`${API_BASE_URL}/api/v1/query`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: '我站在红色大楼的北侧约5米处',
+                        top_k: 3,
+                        enable_enhanced: true,
+                        return_debug_info: true
+                    })
+                });
+                
+                if (!queryRes.ok) {
+                    addResult('查询处理', false, `HTTP错误: ${queryRes.status}`);
+                } else {
+                    const queryData = await queryRes.json();
+                    const success = queryData.status === 'success';
+                    addResult('查询处理', success, success ? '查询成功' : '查询失败', queryData);
+                }
+            } catch (e) {
+                addResult('查询处理', false, `请求失败: ${e.message}`);
+            }
+        }
+        
+        // 页面加载时自动运行测试
+        runTests();
+    </script>
+</body>
+</html>

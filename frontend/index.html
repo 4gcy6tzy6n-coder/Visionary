@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text2Loc - 智能位置定位</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            color: #1a1a1a;
+            line-height: 1.6;
+        }
+
+        /* 顶部导航 */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: #ffffff;
+            border-bottom: 1px solid #e5e5e5;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 100;
+        }
+
+        .navbar-brand {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1a1a1a;
+            text-decoration: none;
+        }
+
+        .navbar-nav {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav-link {
+            padding: 8px 16px;
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover {
+            background: #f5f5f5;
+            color: #1a1a1a;
+        }
+
+        .nav-link.active {
+            background: #f0f0f0;
+            color: #1a1a1a;
+            font-weight: 500;
+        }
+
+        /* 模型状态指示器 */
+        .model-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: #f8f9fa;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .model-badge .indicator {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #10a37f;
+        }
+
+        .model-badge .indicator.offline {
+            background: #dc3545;
+        }
+
+        /* 主内容区 */
+        .main-container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 100px 24px 40px;
+        }
+
+        /* 页面标题 */
+        .page-header {
+            text-align: center;
+            margin-bottom: 48px;
+        }
+
+        .page-header h1 {
+            font-size: 32px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 12px;
+        }
+
+        .page-header p {
+            font-size: 16px;
+            color: #666;
+        }
+
+        /* 输入区域 */
+        .input-section {
+            background: #ffffff;
+            border: 1px solid #e5e5e5;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
+
+        .input-label {
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+        .input-area {
+            width: 100%;
+            min-height: 120px;
+            padding: 16px;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            font-size: 15px;
+            line-height: 1.6;
+            resize: vertical;
+            transition: border-color 0.2s;
+            font-family: inherit;
+        }
+
+        .input-area:focus {
+            outline: none;
+            border-color: #10a37f;
+        }
+
+        .input-area::placeholder {
+            color: #999;
+        }
+
+        /* 选项区域 */
+        .options-row {
+            display: flex;
+            gap: 24px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .option-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .option-group label {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .option-group input[type="number"] {
+            width: 60px;
+            padding: 6px 10px;
+            border: 1px solid #e5e5e5;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+
+        .option-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #10a37f;
+        }
+
+        /* 语音输入按钮 */
+        .voice-input-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-bottom: 12px;
+        }
+
+        .voice-input-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .voice-input-btn.listening {
+            animation: voicePulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes voicePulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(102, 126, 234, 0.4); }
+            50% { box-shadow: 0 0 0 15px rgba(102, 126, 234, 0); }
+        }
+
+        .voice-input-btn .mic-icon {
+            font-size: 20px;
+        }
+
+        /* 或分隔线 */
+        .divider {
+            display: flex;
+            align-items: center;
+            margin: 16px 0;
+            color: #999;
+            font-size: 13px;
+        }
+
+        .divider::before,
+        .divider::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: #e5e5e5;
+        }
+
+        .divider span {
+            padding: 0 16px;
+        }
+
+        /* 提交按钮 */
+        .submit-btn {
+            width: 100%;
+            padding: 14px 24px;
+            background: #10a37f;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 20px;
+        }
+
+        .submit-btn:hover {
+            background: #0d8c6d;
+        }
+
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        /* 加载状态 */
+        .loading-section {
+            display: none;
+            text-align: center;
+            padding: 48px 24px;
+        }
+
+        .loading-section.active {
+            display: block;
+        }
+
+        .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 3px solid #f0f0f0;
+            border-top-color: #10a37f;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 16px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #666;
+            font-size: 14px;
+        }
+
+        /* 结果区域 */
+        .results-section {
+            display: none;
+            margin-top: 32px;
+        }
+
+        .results-section.active {
+            display: block;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        /* 查询分析卡片 */
+        .analysis-card {
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .analysis-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e5e5e5;
+        }
+
+        .analysis-item:last-child {
+            border-bottom: none;
+        }
+
+        .analysis-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .analysis-value {
+            font-weight: 500;
+            color: #1a1a1a;
+            font-size: 14px;
+        }
+
+        /* 结果列表 */
+        .result-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .result-item {
+            background: #ffffff;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            padding: 20px;
+            transition: all 0.2s;
+        }
+
+        .result-item:hover {
+            border-color: #10a37f;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        }
+
+        .result-item.top-result {
+            border-color: #10a37f;
+            background: #f6fffd;
+        }
+
+        .result-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .result-rank {
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+        }
+
+        .result-item.top-result .result-rank {
+            color: #10a37f;
+        }
+
+        .result-score {
+            font-size: 14px;
+            font-weight: 600;
+            color: #10a37f;
+        }
+
+        .result-description {
+            font-size: 14px;
+            color: #666;
+            line-height: 1.6;
+            margin: 8px 0;
+        }
+
+        .result-coordinates {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin: 8px 0;
+            font-size: 14px;
+        }
+
+        .coord-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .coord-value {
+            color: #1a1a1a;
+            font-family: 'Courier New', monospace;
+            font-weight: 600;
+            background: #f5f5f5;
+            padding: 2px 8px;
+            border-radius: 4px;
+        }
+
+        .result-reference {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-top: 8px;
+            font-size: 13px;
+        }
+
+        .ref-label {
+            color: #888;
+        }
+
+        .ref-value {
+            color: #666;
+        }
+
+        /* 会话状态显示 */
+        .session-status {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-top: 20px;
+            padding: 12px 16px;
+            background: #f0f7ff;
+            border: 1px solid #d0e3ff;
+            border-radius: 8px;
+        }
+
+        .session-label {
+            font-size: 13px;
+            font-weight: 500;
+            color: #1a73e8;
+        }
+
+        .session-id {
+            flex: 1;
+            font-size: 12px;
+            color: #666;
+            font-family: monospace;
+        }
+
+        .end-session-btn {
+            padding: 6px 12px;
+            background: #fff;
+            color: #666;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .end-session-btn:hover {
+            background: #f5f5f5;
+            border-color: #999;
+        }
+
+        /* 统计信息 */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 16px;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .stat-box {
+            text-align: center;
+            padding: 16px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .stat-value {
+            font-size: 24px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .stat-label {
+            font-size: 13px;
+            color: #666;
+            margin-top: 4px;
+        }
+
+        /* 澄清问题 */
+        .clarification-box {
+            background: #fff9e6;
+            border: 1px solid #ffd700;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .clarification-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: #856404;
+            margin-bottom: 8px;
+        }
+
+        .clarification-question {
+            font-size: 15px;
+            color: #1a1a1a;
+            margin-bottom: 12px;
+        }
+
+        .suggestion-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        .suggestion-tag {
+            padding: 6px 12px;
+            background: white;
+            border: 1px solid #ffd700;
+            border-radius: 16px;
+            font-size: 13px;
+            color: #856404;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .suggestion-tag:hover {
+            background: #ffd700;
+            color: #1a1a1a;
+        }
+
+        /* 错误提示 */
+        .error-box {
+            background: #fff5f5;
+            border: 1px solid #ffcdd2;
+            border-radius: 8px;
+            padding: 16px;
+            color: #c62828;
+            font-size: 14px;
+        }
+
+        /* 示例提示 */
+        .examples-section {
+            margin-top: 32px;
+            padding-top: 32px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .examples-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: #666;
+            margin-bottom: 12px;
+        }
+
+        .example-item {
+            padding: 10px 14px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            font-size: 14px;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .example-item:hover {
+            background: #e8f5f1;
+            color: #10a37f;
+        }
+
+        /* 页脚 */
+        .footer {
+            text-align: center;
+            padding: 40px 24px;
+            color: #999;
+            font-size: 13px;
+            border-top: 1px solid #f0f0f0;
+            margin-top: 60px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <a href="./index.html" class="navbar-brand">Text2Loc</a>
+        <div class="model-badge" id="modelBadge">
+            <span class="indicator"></span>
+            <span id="modelText">加载中...</span>
+        </div>
+        <div class="navbar-nav">
+            <a href="./index.html" class="nav-link active">文本版</a>
+            <a href="./voice.html" class="nav-link">语音版</a>
+            <a href="./config.html" class="nav-link">配置</a>
+        </div>
+    </nav>
+
+    <!-- 主内容 -->
+    <div class="main-container">
+        <!-- 页面标题 -->
+        <div class="page-header">
+            <h1>智能位置定位</h1>
+            <p>输入自然语言描述，获取精准位置信息</p>
+        </div>
+
+        <!-- 输入区域 -->
+        <div class="input-section">
+            <label class="input-label" id="inputLabel">位置描述</label>
+            <textarea 
+                class="input-area" 
+                id="queryInput"
+            ></textarea>
+
+            <div class="options-row">
+                <div class="option-group">
+                    <label>返回结果数：</label>
+                    <input type="number" id="topK" value="5" min="1" max="20">
+                </div>
+                <div class="option-group">
+                    <input type="checkbox" id="enhancedMode" checked>
+                    <label for="enhancedMode">启用增强模式</label>
+                </div>
+                <div class="option-group">
+                    <input type="checkbox" id="interactiveMode" onchange="onInteractiveModeChange()">
+                    <label for="interactiveMode">交互式模式</label>
+                </div>
+            </div>
+
+            <!-- 语音输入按钮 -->
+            <button class="voice-input-btn" id="voiceBtn" onclick="toggleVoiceInput()">
+                <span class="mic-icon">🎤</span>
+                <span id="voiceBtnText">语音输入</span>
+            </button>
+
+            <div class="divider">
+                <span>或</span>
+            </div>
+
+            <button class="submit-btn" id="submitBtn" onclick="submitQuery()">
+                开始定位
+            </button>
+            
+            <!-- 会话状态显示（交互式模式） -->
+            <div class="session-status" id="sessionStatus" style="display: none;">
+                <span class="session-label">会话状态</span>
+                <span class="session-id" id="sessionIdDisplay">-</span>
+                <button class="end-session-btn" onclick="endSession()">结束会话</button>
+            </div>
+        </div>
+
+        <!-- 加载状态 -->
+        <div class="loading-section" id="loadingSection">
+            <div class="loading-spinner"></div>
+            <div class="loading-text" id="loadingText">正在处理...</div>
+        </div>
+
+        <!-- 结果区域 -->
+        <div class="results-section" id="resultsSection">
+            <!-- 查询分析 -->
+            <div class="section-title">查询分析</div>
+            <div class="analysis-card" id="analysisCard">
+                <div class="analysis-item">
+                    <span class="analysis-label">原始描述</span>
+                    <span class="analysis-value" id="originalQuery">-</span>
+                </div>
+                <div class="analysis-item">
+                    <span class="analysis-label">识别方向</span>
+                    <span class="analysis-value" id="parsedDirection">-</span>
+                </div>
+                <div class="analysis-item">
+                    <span class="analysis-label">识别颜色</span>
+                    <span class="analysis-value" id="parsedColor">-</span>
+                </div>
+                <div class="analysis-item">
+                    <span class="analysis-label">识别对象</span>
+                    <span class="analysis-value" id="parsedObject">-</span>
+                </div>
+                <div class="analysis-item">
+                    <span class="analysis-label">解析模型</span>
+                    <span class="analysis-value" id="parseModel">-</span>
+                </div>
+                <div class="analysis-item">
+                    <span class="analysis-label">解析耗时</span>
+                    <span class="analysis-value" id="parseTime">-</span>
+                </div>
+            </div>
+
+            <!-- 澄清问题 -->
+            <div class="clarification-box" id="clarificationBox" style="display: none;">
+                <div class="clarification-title">需要更多信息</div>
+                <div class="clarification-question" id="clarificationQuestion"></div>
+                <div class="suggestion-tags" id="suggestionTags"></div>
+            </div>
+
+            <!-- 定位结果 -->
+            <div class="section-title">定位结果</div>
+            <div class="result-list" id="resultList"></div>
+
+            <!-- 统计信息 -->
+            <div class="stats-row">
+                <div class="stat-box">
+                    <div class="stat-value" id="statTime">-</div>
+                    <div class="stat-label">处理时间</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="statConfidence">-</div>
+                    <div class="stat-label">置信度</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-value" id="statResults">-</div>
+                    <div class="stat-label">结果数量</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 错误提示 -->
+        <div class="error-box" id="errorBox" style="display: none;"></div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        Text2Loc Visionary &copy; 2024
+    </footer>
+
+    <script>
+        // 智能检测API地址
+        function getApiBaseUrl() {
+            const hostname = window.location.hostname;
+            const port = window.location.port;
+            
+            // 如果是localhost或127.0.0.1，直接使用5050端口
+            if (hostname === 'localhost' || hostname === '127.0.0.1') {
+                return 'http://localhost:5050';
+            }
+            
+            // 如果是iPhone通过内网IP访问，使用相同IP不同端口
+            if (hostname.match(/^192\.168\./) || hostname.match(/^10\./)) {
+                return `http://${hostname}:5050`;
+            }
+            
+            // 其他情况，使用当前域名
+            return window.location.origin;
+        }
+        
+        const API_BASE_URL = getApiBaseUrl();
+        console.log('🔌 API地址:', API_BASE_URL);
+        let sessionId = null;
+        let queryStartTime = null;
+        let progressInterval = null;
+        let queryHistory = [];  // 保存查询历史
+
+        // 加载模型配置
+        async function loadModelConfig() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/v1/config`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    const modelText = document.getElementById('modelText');
+                    const indicator = document.querySelector('.model-badge .indicator');
+
+                    if (data.is_configured) {
+                        modelText.textContent = `${data.provider} / ${data.model}`;
+                        indicator.classList.remove('offline');
+                    } else {
+                        modelText.textContent = '未配置';
+                        indicator.classList.add('offline');
+                    }
+                }
+            } catch (error) {
+                document.getElementById('modelText').textContent = '连接失败';
+                document.querySelector('.model-badge .indicator').classList.add('offline');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', loadModelConfig);
+
+        function setQuery(text) {
+            document.getElementById('queryInput').value = text;
+        }
+
+        function updateProgress() {
+            if (queryStartTime) {
+                const elapsed = Math.floor((Date.now() - queryStartTime) / 1000);
+                const loadingText = document.getElementById('loadingText');
+                if (elapsed > 3) {
+                    loadingText.textContent = `正在处理... (${elapsed}s)`;
+                }
+            }
+        }
+
+        // 交互式模式切换处理
+        function onInteractiveModeChange() {
+            const interactiveMode = document.getElementById('interactiveMode').checked;
+            if (!interactiveMode) {
+                // 关闭交互式模式时重置状态
+                endSession();
+            }
+        }
+
+        async function submitQuery() {
+            const queryInput = document.getElementById('queryInput');
+            const query = queryInput.value.trim();
+            const topK = parseInt(document.getElementById('topK').value);
+            const enhancedMode = document.getElementById('enhancedMode').checked;
+            const interactiveMode = document.getElementById('interactiveMode').checked;
+
+            if (!query) {
+                alert(sessionId ? '请输入补充信息' : '请输入位置描述');
+                return;
+            }
+
+            // 保存查询到历史
+            if (!sessionId) {
+                queryHistory = [query];
+            } else {
+                queryHistory.push(query);
+            }
+
+            // 创建会话ID
+            if (interactiveMode && !sessionId) {
+                sessionId = 'web_' + Date.now().toString(36);
+            }
+
+            // 显示加载
+            document.getElementById('loadingSection').classList.add('active');
+            document.getElementById('resultsSection').classList.remove('active');
+            document.getElementById('errorBox').style.display = 'none';
+            document.getElementById('submitBtn').disabled = true;
+
+            queryStartTime = Date.now();
+            progressInterval = setInterval(updateProgress, 1000);
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/v1/query`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        query: query,
+                        top_k: topK,
+                        enable_enhanced: enhancedMode,
+                        session_id: sessionId,
+                        interactive: interactiveMode
+                    })
+                });
+
+                clearInterval(progressInterval);
+                const data = await response.json();
+
+                if (data.status === 'error') {
+                    throw new Error(data.error);
+                }
+
+                if (data.session_id) {
+                    sessionId = data.session_id;
+                }
+
+                // 更新UI状态
+                if (interactiveMode && data.need_clarification) {
+                    // 进入补充信息模式
+                    updateInteractiveUI(true, data.clarification_question);
+                } else {
+                    // 完成或结束
+                    if (interactiveMode) {
+                        // 交互式模式完成，保持状态但清空输入
+                        queryInput.value = '';
+                    } else {
+                        // 非交互模式，完全重置
+                        endSession();
+                    }
+                }
+
+                displayResults(data);
+
+            } catch (error) {
+                clearInterval(progressInterval);
+                document.getElementById('errorBox').textContent = error.message;
+                document.getElementById('errorBox').style.display = 'block';
+            } finally {
+                document.getElementById('loadingSection').classList.remove('active');
+                document.getElementById('submitBtn').disabled = false;
+            }
+        }
+
+        // 更新交互式UI状态
+        function updateInteractiveUI(isFollowup, question) {
+            const inputLabel = document.getElementById('inputLabel');
+            const submitBtn = document.getElementById('submitBtn');
+            const sessionStatus = document.getElementById('sessionStatus');
+            const sessionIdDisplay = document.getElementById('sessionIdDisplay');
+
+            if (isFollowup) {
+                // 补充信息模式
+                inputLabel.textContent = '补充信息';
+                submitBtn.textContent = '再次定位';
+                sessionStatus.style.display = 'flex';
+                sessionIdDisplay.textContent = sessionId ? sessionId.substring(0, 15) + '...' : '-';
+            } else {
+                // 初始模式
+                inputLabel.textContent = '位置描述';
+                submitBtn.textContent = '开始定位';
+                sessionStatus.style.display = 'none';
+            }
+        }
+
+        // 结束会话
+        function endSession() {
+            sessionId = null;
+            queryHistory = [];
+            document.getElementById('queryInput').value = '';
+            updateInteractiveUI(false);
+        }
+
+        // ==================== 语音识别功能 ====================
+        let recognition = null;
+        let isListening = false;
+        let permissionGranted = false;
+
+        // 检查麦克风权限
+        async function checkMicrophonePermission() {
+            try {
+                if (navigator.permissions && navigator.permissions.query) {
+                    try {
+                        const result = await navigator.permissions.query({ name: 'microphone' });
+                        if (result.state === 'granted') {
+                            permissionGranted = true;
+                            return true;
+                        } else if (result.state === 'denied') {
+                            return false;
+                        }
+                    } catch (e) {
+                        console.log('Permissions API 不支持');
+                    }
+                }
+                
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                permissionGranted = true;
+                stream.getTracks().forEach(track => track.stop());
+                return true;
+            } catch (error) {
+                permissionGranted = false;
+                return false;
+            }
+        }
+
+        // 初始化语音识别
+        function initSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            if (!SpeechRecognition) {
+                console.warn('浏览器不支持语音识别');
+                document.getElementById('voiceBtn').style.display = 'none';
+                return false;
+            }
+
+            recognition = new SpeechRecognition();
+            recognition.continuous = false;
+            recognition.interimResults = true;
+            recognition.lang = 'zh-CN'; // 默认使用普通话
+
+            recognition.onstart = () => {
+                isListening = true;
+                const voiceBtn = document.getElementById('voiceBtn');
+                const voiceBtnText = document.getElementById('voiceBtnText');
+                voiceBtn.classList.add('listening');
+                voiceBtnText.textContent = '正在聆听...';
+            };
+
+            recognition.onresult = (event) => {
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+
+                const queryInput = document.getElementById('queryInput');
+                if (finalTranscript) {
+                    queryInput.value = finalTranscript;
+                } else if (interimTranscript) {
+                    queryInput.value = interimTranscript;
+                }
+            };
+
+            recognition.onerror = (event) => {
+                console.error('语音识别错误:', event.error);
+                let errorMsg = '语音识别出错';
+                
+                switch(event.error) {
+                    case 'no-speech':
+                        errorMsg = '未检测到语音，请重试';
+                        break;
+                    case 'audio-capture':
+                        errorMsg = '无法访问麦克风，请检查设备连接';
+                        permissionGranted = false;
+                        break;
+                    case 'not-allowed':
+                        errorMsg = '麦克风权限被拒绝，请点击浏览器地址栏左侧的图标允许访问';
+                        permissionGranted = false;
+                        break;
+                    case 'network':
+                        errorMsg = '网络错误，请检查网络连接';
+                        break;
+                    case 'service-not-allowed':
+                        errorMsg = '语音服务不可用，请检查浏览器设置';
+                        break;
+                }
+                
+                alert(errorMsg);
+                stopVoiceInput();
+            };
+
+            recognition.onend = () => {
+                stopVoiceInput();
+            };
+
+            return true;
+        }
+
+        // 停止语音识别
+        function stopVoiceInput() {
+            isListening = false;
+            const voiceBtn = document.getElementById('voiceBtn');
+            const voiceBtnText = document.getElementById('voiceBtnText');
+            voiceBtn.classList.remove('listening');
+            voiceBtnText.textContent = '语音输入';
+            
+            if (recognition) {
+                recognition.stop();
+            }
+        }
+
+        // 切换语音识别状态
+        async function toggleVoiceInput() {
+            if (!recognition) {
+                if (!initSpeechRecognition()) {
+                    alert('您的浏览器不支持语音识别功能，请使用 Chrome、Edge 或 Safari 浏览器');
+                    return;
+                }
+            }
+
+            if (isListening) {
+                recognition.stop();
+            } else {
+                // 检查权限
+                if (!permissionGranted) {
+                    const granted = await checkMicrophonePermission();
+                    if (!granted) {
+                        alert('无法访问麦克风，请在浏览器设置中允许麦克风访问');
+                        return;
+                    }
+                }
+                
+                try {
+                    // 请求麦克风权限
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    stream.getTracks().forEach(track => track.stop());
+                    recognition.start();
+                } catch (err) {
+                    console.error('麦克风权限错误:', err);
+                    
+                    if (err.name === 'NotAllowedError') {
+                        alert('麦克风权限被拒绝。请点击浏览器地址栏左侧的图标，选择“网站设置”，允许麦克风访问。');
+                    } else if (err.name === 'NotFoundError') {
+                        alert('未检测到麦克风设备。请确保麦克风已正确连接。');
+                    } else {
+                        alert('无法访问麦克风，请检查权限设置');
+                    }
+                    
+                    permissionGranted = false;
+                }
+            }
+        }
+
+        // 页面加载时初始化语音识别
+        document.addEventListener('DOMContentLoaded', async () => {
+            initSpeechRecognition();
+            await checkMicrophonePermission();
+        });
+
+        function displayResults(data) {
+            const analysis = data.query_analysis || {};
+
+            // 填充分析结果
+            document.getElementById('originalQuery').textContent = data.query || '-';
+            document.getElementById('parsedDirection').textContent = analysis.direction || '-';
+            document.getElementById('parsedColor').textContent = analysis.color || '-';
+            document.getElementById('parsedObject').textContent = analysis.object || '-';
+            document.getElementById('parseModel').textContent = analysis.nlu_model || '-';
+            document.getElementById('parseTime').textContent = analysis.parse_time_ms ? 
+                analysis.parse_time_ms.toFixed(0) + 'ms' : '-';
+
+            // 澄清问题
+            const clarificationBox = document.getElementById('clarificationBox');
+            if (data.need_clarification && data.clarification_question) {
+                clarificationBox.style.display = 'block';
+                document.getElementById('clarificationQuestion').textContent = data.clarification_question;
+
+                const tagsContainer = document.getElementById('suggestionTags');
+                tagsContainer.innerHTML = '';
+                if (data.suggestions) {
+                    data.suggestions.forEach(suggestion => {
+                        const tag = document.createElement('span');
+                        tag.className = 'suggestion-tag';
+                        tag.textContent = suggestion;
+                        tag.onclick = () => setQuery(suggestion);
+                        tagsContainer.appendChild(tag);
+                    });
+                }
+            } else {
+                clarificationBox.style.display = 'none';
+            }
+
+            // 结果列表
+            const resultList = document.getElementById('resultList');
+            resultList.innerHTML = '';
+
+            const results = data.retrieval_results || [];
+            results.forEach((result, index) => {
+                const item = document.createElement('div');
+                item.className = 'result-item' + (index === 0 ? ' top-result' : '');
+                const refObjects = result.reference_objects && result.reference_objects.length > 0 
+                    ? result.reference_objects.join(', ') 
+                    : '无';
+                item.innerHTML = `
+                    <div class="result-header">
+                        <span class="result-rank">#${index + 1}</span>
+                        <span class="result-score">${(result.confidence * 100).toFixed(1)}%</span>
+                    </div>
+                    <div class="result-coordinates">
+                        <span class="coord-label">坐标:</span>
+                        <span class="coord-value">(${result.x !== undefined ? result.x.toFixed(2) : '0.00'}, ${result.y !== undefined ? result.y.toFixed(2) : '0.00'})</span>
+                    </div>
+                    <div class="result-description">${result.description || '无描述'}</div>
+                    <div class="result-reference">
+                        <span class="ref-label">参考对象:</span>
+                        <span class="ref-value">${refObjects}</span>
+                    </div>
+                `;
+                resultList.appendChild(item);
+            });
+
+            // 统计
+            document.getElementById('statTime').textContent = 
+                data.processing_time_ms ? data.processing_time_ms.toFixed(0) + 'ms' : '-';
+            document.getElementById('statConfidence').textContent = 
+                analysis.confidence ? (analysis.confidence * 100).toFixed(0) + '%' : '-';
+            document.getElementById('statResults').textContent = results.length;
+
+            document.getElementById('resultsSection').classList.add('active');
+        }
+
+    </script>
+</body>
+</html>

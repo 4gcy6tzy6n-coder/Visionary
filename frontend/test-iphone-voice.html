@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>iPhone远程语音功能测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border: 1px solid #e5e5e5;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+        
+        h1 {
+            color: #1a1a1a;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+        
+        .test-title {
+            font-weight: 600;
+            color: #10a37f;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+        
+        button {
+            width: 100%;
+            padding: 12px;
+            background: #10a37f;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 10px;
+            transition: all 0.3s;
+        }
+        
+        button:hover {
+            background: #0d8a6a;
+        }
+        
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        
+        .success {
+            color: #10a37f;
+            font-weight: 600;
+        }
+        
+        .error {
+            color: #ff4757;
+            font-weight: 600;
+        }
+        
+        pre {
+            background: #282c34;
+            color: #abb2bf;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+        
+        .info-box {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border-left: 4px solid #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📱 iPhone远程语音功能测试</h1>
+        <p class="subtitle">验证从iPhone到Mac的完整定位分析流程</p>
+        
+        <div class="info-box">
+            <strong>测试目标：</strong>
+            <ul style="margin-left: 20px; margin-top: 10px;">
+                <li>✅ 语音输入文本传输到Mac</li>
+                <li>✅ Mac端NLU语义解析</li>
+                <li>✅ Text2Loc定位算法处理</li>
+                <li>✅ 返回3D坐标信息</li>
+            </ul>
+        </div>
+        
+        <div class="test-section">
+            <div class="test-title">测试1: 健康检查</div>
+            <button onclick="testHealth()">检查Mac服务状态</button>
+            <div id="healthResult" class="result" style="display:none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <div class="test-title">测试2: 模拟iPhone语音输入</div>
+            <button onclick="testRemoteVoice('红色的汽车')">发送："红色的汽车"</button>
+            <button onclick="testRemoteVoice('建筑物的左侧')">发送："建筑物的左侧"</button>
+            <button onclick="testRemoteVoice('停车场旁边')">发送："停车场旁边"</button>
+            <div id="voiceResult" class="result" style="display:none;"></div>
+        </div>
+        
+        <div class="test-section">
+            <div class="test-title">测试3: 验证完整定位流程</div>
+            <button onclick="testFullPipeline()">执行完整流程测试</button>
+            <div id="pipelineResult" class="result" style="display:none;"></div>
+        </div>
+    </div>
+    
+    <script>
+        const API_BASE = 'http://192.168.0.106:5050';
+        
+        async function testHealth() {
+            const resultDiv = document.getElementById('healthResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = '⏳ 检查中...';
+            
+            try {
+                const response = await fetch(`${API_BASE}/health`);
+                const data = await response.json();
+                
+                resultDiv.innerHTML = `
+                    <div class="success">✅ Mac服务正常运行</div>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                `;
+            } catch (e) {
+                resultDiv.innerHTML = `
+                    <div class="error">❌ 连接失败: ${e.message}</div>
+                `;
+            }
+        }
+        
+        async function testRemoteVoice(text) {
+            const resultDiv = document.getElementById('voiceResult');
+            resultDiv.style.display = 'block';
+            resultDiv.innerHTML = `⏳ 正在发送 "${text}" 到Mac...`;
+            
+            try {
+                const response = await fetch(`${API_BASE}/api/v1/remote-voice`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: text,
+                        device: 'iPhone',
+                        timestamp: new Date().toISOString()
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.status === 'success' && data.result) {
+                    const result = data.result;
+                    const final = result.final_result || {};
+                    
+                    resultDiv.innerHTML = `
+                        <div class="success">✅ 定位分析完成！</div>
+                        <div style="margin-top: 10px;">
+                            <strong>查询文本:</strong> ${text}<br>
+                            <strong>Cell ID:</strong> ${final.cell_id}<br>
+                            <strong>3D坐标:</strong> X=${final.x?.toFixed(2)}m, Y=${final.y?.toFixed(2)}m<br>
+                            <strong>置信度:</strong> ${((final.confidence || 0) * 100).toFixed(1)}%<br>
+                            <strong>处理时间:</strong> ${data.processing_time_ms?.toFixed(1)}ms
+                        </div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error">❌ 处理失败</div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                }
+            } catch (e) {
+                resultDiv.innerHTML = `
+                    <div class="error">❌ 请求失败: ${e.message}</div>
+                `;
+            }
+        }
+        
+        async function testFullPipeline() {
+            const resultDiv = document.getElementById('pipelineResult');
+            resultDiv.style.display = 'block';
+            
+            const steps = [];
+            let allPassed = true;
+            
+            // 步骤1: 健康检查
+            steps.push('1️⃣ 检查Mac服务...');
+            resultDiv.innerHTML = steps.join('<br>');
+            
+            try {
+                const healthResp = await fetch(`${API_BASE}/health`);
+                const healthData = await healthResp.json();
+                if (healthData.status === 'healthy') {
+                    steps.push('   ✅ Mac服务正常');
+                } else {
+                    steps.push('   ❌ Mac服务异常');
+                    allPassed = false;
+                }
+            } catch (e) {
+                steps.push('   ❌ 无法连接Mac');
+                allPassed = false;
+            }
+            
+            resultDiv.innerHTML = steps.join('<br>');
+            await sleep(500);
+            
+            // 步骤2: 发送语音文本
+            steps.push('<br>2️⃣ 发送语音文本到Mac...');
+            resultDiv.innerHTML = steps.join('<br>');
+            
+            const testText = '红色的汽车';
+            try {
+                const voiceResp = await fetch(`${API_BASE}/api/v1/remote-voice`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        text: testText,
+                        device: 'iPhone',
+                        timestamp: new Date().toISOString()
+                    })
+                });
+                
+                const voiceData = await voiceResp.json();
+                
+                if (voiceData.status === 'success') {
+                    steps.push('   ✅ 文本传输成功');
+                    
+                    // 步骤3: 验证NLU解析
+                    steps.push('<br>3️⃣ 验证NLU语义解析...');
+                    resultDiv.innerHTML = steps.join('<br>');
+                    await sleep(500);
+                    
+                    if (voiceData.result && voiceData.result.query_analysis) {
+                        const analysis = voiceData.result.query_analysis;
+                        steps.push(`   ✅ NLU解析完成`);
+                        steps.push(`      - 对象: ${analysis.object}`);
+                        steps.push(`      - 颜色: ${analysis.color}`);
+                        steps.push(`      - 方向: ${analysis.direction}`);
+                    } else {
+                        steps.push('   ❌ NLU解析失败');
+                        allPassed = false;
+                    }
+                    
+                    // 步骤4: 验证定位结果
+                    steps.push('<br>4️⃣ 验证Text2Loc定位...');
+                    resultDiv.innerHTML = steps.join('<br>');
+                    await sleep(500);
+                    
+                    if (voiceData.result && voiceData.result.final_result) {
+                        const final = voiceData.result.final_result;
+                        steps.push(`   ✅ 定位计算完成`);
+                        steps.push(`      - Cell ID: ${final.cell_id}`);
+                        steps.push(`      - 坐标X: ${final.x?.toFixed(2)}m`);
+                        steps.push(`      - 坐标Y: ${final.y?.toFixed(2)}m`);
+                        steps.push(`      - 置信度: ${((final.confidence || 0) * 100).toFixed(1)}%`);
+                        
+                        // 验证坐标是否有效
+                        if (final.cell_id && final.cell_id.includes('2013_05_28_drive')) {
+                            steps.push('<br><div class="success">🎉 完整流程测试通过！</div>');
+                            steps.push('iPhone → Mac文本传输 ✅');
+                            steps.push('NLU语义解析 ✅');
+                            steps.push('Text2Loc定位算法 ✅');
+                            steps.push('3D坐标返回 ✅');
+                        } else {
+                            steps.push('<br><div class="error">⚠️ Cell ID格式异常</div>');
+                        }
+                    } else {
+                        steps.push('   ❌ 定位计算失败');
+                        allPassed = false;
+                    }
+                } else {
+                    steps.push('   ❌ 文本传输失败');
+                    allPassed = false;
+                }
+            } catch (e) {
+                steps.push(`   ❌ 请求失败: ${e.message}`);
+                allPassed = false;
+            }
+            
+            resultDiv.innerHTML = steps.join('<br>');
+        }
+        
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+    </script>
+</body>
+</html>

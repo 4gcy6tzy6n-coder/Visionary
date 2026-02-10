@@ -1,0 +1,779 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text2Loc - 模型配置</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            color: #1a1a1a;
+            line-height: 1.6;
+        }
+
+        /* 顶部导航 */
+        .navbar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background: #ffffff;
+            border-bottom: 1px solid #e5e5e5;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            z-index: 100;
+        }
+
+        .navbar-brand {
+            font-size: 20px;
+            font-weight: 600;
+            color: #1a1a1a;
+            text-decoration: none;
+        }
+
+        /* 模型状态指示器 */
+        .model-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 12px;
+            background: #f8f9fa;
+            border-radius: 20px;
+            font-size: 13px;
+            color: #666;
+        }
+
+        .model-badge .indicator {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #10a37f;
+        }
+
+        .model-badge .indicator.offline {
+            background: #dc3545;
+        }
+
+        .navbar-nav {
+            display: flex;
+            gap: 8px;
+        }
+
+        .nav-link {
+            padding: 8px 16px;
+            color: #666;
+            text-decoration: none;
+            font-size: 14px;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .nav-link:hover {
+            background: #f5f5f5;
+            color: #1a1a1a;
+        }
+
+        .nav-link.active {
+            background: #f0f0f0;
+            color: #1a1a1a;
+            font-weight: 500;
+        }
+
+        /* 主内容区 */
+        .main-container {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 100px 24px 40px;
+        }
+
+        /* 页面标题 */
+        .page-header {
+            margin-bottom: 32px;
+        }
+
+        .page-header h1 {
+            font-size: 28px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+
+        .page-header p {
+            font-size: 15px;
+            color: #666;
+        }
+
+        /* 当前配置卡片 */
+        .config-status-card {
+            background: #f8f9fa;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 32px;
+        }
+
+        .config-status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 16px;
+        }
+
+        .config-status-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .status-badge.active {
+            background: #e6f4f1;
+            color: #10a37f;
+        }
+
+        .status-badge.inactive {
+            background: #f5f5f5;
+            color: #999;
+        }
+
+        .status-badge .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .config-info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+
+        .config-info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .config-info-label {
+            font-size: 13px;
+            color: #999;
+        }
+
+        .config-info-value {
+            font-size: 14px;
+            font-weight: 500;
+            color: #1a1a1a;
+        }
+
+        /* 提供商选择 */
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 16px;
+        }
+
+        .provider-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+            margin-bottom: 32px;
+        }
+
+        .provider-card {
+            border: 2px solid #e5e5e5;
+            border-radius: 10px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.2s;
+            text-align: center;
+        }
+
+        .provider-card:hover {
+            border-color: #10a37f;
+        }
+
+        .provider-card.active {
+            border-color: #10a37f;
+            background: #f6fffd;
+        }
+
+        .provider-icon {
+            width: 40px;
+            height: 40px;
+            margin: 0 auto 12px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            font-weight: 600;
+        }
+
+        .provider-card[data-provider="deepseek"] .provider-icon {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .provider-card[data-provider="ollama"] .provider-icon {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .provider-card[data-provider="openai"] .provider-icon {
+            background: #e8f5e9;
+            color: #388e3c;
+        }
+
+        .provider-name {
+            font-size: 15px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-bottom: 4px;
+        }
+
+        .provider-desc {
+            font-size: 12px;
+            color: #999;
+        }
+
+        /* 配置表单 */
+        .config-form {
+            display: none;
+        }
+
+        .config-form.active {
+            display: block;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 500;
+            color: #1a1a1a;
+            margin-bottom: 8px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #10a37f;
+        }
+
+        .form-input::placeholder {
+            color: #bbb;
+        }
+
+        .form-hint {
+            font-size: 12px;
+            color: #999;
+            margin-top: 6px;
+        }
+
+        /* 模型列表 */
+        .model-list-container {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            margin-top: 8px;
+        }
+
+        .model-list-item {
+            padding: 12px 16px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.2s;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .model-list-item:last-child {
+            border-bottom: none;
+        }
+
+        .model-list-item:hover {
+            background: #f8f9fa;
+        }
+
+        .model-list-item.selected {
+            background: #e6f4f1;
+            color: #10a37f;
+            font-weight: 500;
+        }
+
+        /* 按钮组 */
+        .button-group {
+            display: flex;
+            gap: 12px;
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background: #10a37f;
+            color: white;
+            flex: 1;
+        }
+
+        .btn-primary:hover {
+            background: #0d8c6d;
+        }
+
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #666;
+        }
+
+        .btn-secondary:hover {
+            background: #e5e5e5;
+        }
+
+        .btn-test {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .btn-test:hover {
+            background: #bbdefb;
+        }
+
+        /* 测试结果 */
+        .test-result {
+            margin-top: 20px;
+            padding: 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            display: none;
+        }
+
+        .test-result.success {
+            display: block;
+            background: #e8f5e9;
+            color: #2e7d32;
+            border: 1px solid #c8e6c9;
+        }
+
+        .test-result.error {
+            display: block;
+            background: #ffebee;
+            color: #c62828;
+            border: 1px solid #ffcdd2;
+        }
+
+        /* 页脚 */
+        .footer {
+            text-align: center;
+            padding: 40px 24px;
+            color: #999;
+            font-size: 13px;
+            border-top: 1px solid #f0f0f0;
+            margin-top: 60px;
+        }
+    </style>
+</head>
+<body>
+    <!-- 导航栏 -->
+    <nav class="navbar">
+        <a href="./index.html" class="navbar-brand">Text2Loc</a>
+        <div class="model-badge" id="modelBadge">
+            <span class="indicator"></span>
+            <span id="modelText">加载中...</span>
+        </div>
+        <div class="navbar-nav">
+            <a href="./index.html" class="nav-link">文本版</a>
+            <a href="./voice.html" class="nav-link">语音版</a>
+            <a href="./config.html" class="nav-link active">配置</a>
+        </div>
+    </nav>
+
+    <!-- 主内容 -->
+    <div class="main-container">
+        <!-- 页面标题 -->
+        <div class="page-header">
+            <h1>模型配置</h1>
+            <p>配置 AI 模型提供商和连接参数</p>
+        </div>
+
+        <!-- 当前配置状态 -->
+        <div class="config-status-card">
+            <div class="config-status-header">
+                <span class="config-status-title">当前配置</span>
+                <span class="status-badge active" id="statusBadge">
+                    <span class="dot"></span>
+                    <span id="statusText">已配置</span>
+                </span>
+            </div>
+            <div class="config-info-grid">
+                <div class="config-info-item">
+                    <span class="config-info-label">提供商</span>
+                    <span class="config-info-value" id="currentProvider">-</span>
+                </div>
+                <div class="config-info-item">
+                    <span class="config-info-label">模型</span>
+                    <span class="config-info-value" id="currentModel">-</span>
+                </div>
+                <div class="config-info-item">
+                    <span class="config-info-label">API 地址</span>
+                    <span class="config-info-value" id="currentUrl">-</span>
+                </div>
+                <div class="config-info-item">
+                    <span class="config-info-label">响应时间</span>
+                    <span class="config-info-value" id="currentLatency">-</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 提供商选择 -->
+        <div class="section-title">选择提供商</div>
+        <div class="provider-grid">
+            <div class="provider-card active" data-provider="deepseek" onclick="selectProvider('deepseek')">
+                <div class="provider-icon">D</div>
+                <div class="provider-name">DeepSeek</div>
+                <div class="provider-desc">官方 API</div>
+            </div>
+            <div class="provider-card" data-provider="ollama" onclick="selectProvider('ollama')">
+                <div class="provider-icon">O</div>
+                <div class="provider-name">Ollama</div>
+                <div class="provider-desc">本地部署</div>
+            </div>
+            <div class="provider-card" data-provider="openai" onclick="selectProvider('openai')">
+                <div class="provider-icon">A</div>
+                <div class="provider-name">OpenAI</div>
+                <div class="provider-desc">兼容接口</div>
+            </div>
+        </div>
+
+        <!-- DeepSeek 配置 -->
+        <div class="config-form active" id="form-deepseek">
+            <div class="form-group">
+                <label class="form-label">API Key</label>
+                <input type="password" class="form-input" id="ds-apikey" placeholder="输入 DeepSeek API Key">
+                <div class="form-hint">在 DeepSeek 控制台获取 API Key</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">API 地址</label>
+                <div class="form-input" style="background: #f5f5f5; color: #666; cursor: not-allowed;">
+                    https://api.deepseek.com
+                </div>
+                <input type="hidden" id="ds-url" value="https://api.deepseek.com">
+                <div class="form-hint">DeepSeek 官方 API 地址（固定）</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">模型</label>
+                <select class="form-input" id="ds-model">
+                    <option value="deepseek-chat">deepseek-chat</option>
+                    <option value="deepseek-coder">deepseek-coder</option>
+                    <option value="deepseek-reasoner">deepseek-reasoner</option>
+                </select>
+            </div>
+        </div>
+
+        <!-- Ollama 配置 -->
+        <div class="config-form" id="form-ollama">
+            <div class="form-group">
+                <label class="form-label">服务地址</label>
+                <input type="text" class="form-input" id="ollama-url" placeholder="http://localhost:11434" value="http://localhost:11434">
+                <div class="form-hint">Ollama 服务默认运行在 11434 端口</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">模型</label>
+                <input type="text" class="form-input" id="ollama-model" placeholder="qwen3-vl:2b" value="qwen3-vl:2b">
+                <button type="button" class="btn btn-test" onclick="fetchOllamaModels()">获取模型列表</button>
+                <div class="model-list-container" id="ollamaModelList" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- OpenAI 配置 -->
+        <div class="config-form" id="form-openai">
+            <div class="form-group">
+                <label class="form-label">API Key</label>
+                <input type="password" class="form-input" id="openai-apikey" placeholder="输入 API Key">
+            </div>
+            <div class="form-group">
+                <label class="form-label">API 地址</label>
+                <input type="text" class="form-input" id="openai-url" placeholder="https://api.openai.com/v1">
+                <div class="form-hint">支持 OpenAI 及兼容接口（如 OneAPI）</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">模型</label>
+                <input type="text" class="form-input" id="openai-model" placeholder="gpt-3.5-turbo" value="gpt-3.5-turbo">
+            </div>
+        </div>
+
+        <!-- 按钮组 -->
+        <div class="button-group">
+            <button class="btn btn-test" onclick="testConnection()">测试连接</button>
+            <button class="btn btn-secondary" onclick="resetConfig()">重置</button>
+            <button class="btn btn-primary" onclick="saveConfig()">保存配置</button>
+        </div>
+
+        <!-- 测试结果 -->
+        <div class="test-result" id="testResult"></div>
+    </div>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+        Text2Loc Visionary &copy; 2024
+    </footer>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8080';
+        let currentProvider = 'deepseek';
+
+        // 页面加载时获取当前配置
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCurrentConfig();
+            loadModelConfig();
+        });
+
+        // 加载模型配置状态
+        async function loadModelConfig() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/v1/config`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    const modelText = document.getElementById('modelText');
+                    const indicator = document.querySelector('.model-badge .indicator');
+
+                    if (data.is_configured) {
+                        modelText.textContent = `${data.provider} / ${data.model}`;
+                        indicator.classList.remove('offline');
+                    } else {
+                        modelText.textContent = '未配置';
+                        indicator.classList.add('offline');
+                    }
+                }
+            } catch (error) {
+                document.getElementById('modelText').textContent = '连接失败';
+                document.querySelector('.model-badge .indicator').classList.add('offline');
+            }
+        }
+
+        async function loadCurrentConfig() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/v1/config`);
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    document.getElementById('currentProvider').textContent = data.provider || '-';
+                    document.getElementById('currentModel').textContent = data.model || '-';
+                    document.getElementById('currentUrl').textContent = data.url || '-';
+
+                    if (!data.is_configured) {
+                        document.getElementById('statusBadge').className = 'status-badge inactive';
+                        document.getElementById('statusText').textContent = '未配置';
+                    }
+
+                    // 填充表单
+                    if (data.provider === 'deepseek') {
+                        document.getElementById('ds-url').value = data.url || '';
+                        document.getElementById('ds-model').value = data.model || '';
+                    } else if (data.provider === 'ollama') {
+                        selectProvider('ollama');
+                        document.getElementById('ollama-url').value = data.url || '';
+                        document.getElementById('ollama-model').value = data.model || '';
+                    } else if (data.provider === 'openai') {
+                        selectProvider('openai');
+                        document.getElementById('openai-url').value = data.url || '';
+                        document.getElementById('openai-model').value = data.model || '';
+                    }
+                }
+            } catch (error) {
+                console.error('加载配置失败:', error);
+            }
+        }
+
+        function selectProvider(provider) {
+            currentProvider = provider;
+
+            // 更新卡片状态
+            document.querySelectorAll('.provider-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            document.querySelector(`.provider-card[data-provider="${provider}"]`).classList.add('active');
+
+            // 切换表单
+            document.querySelectorAll('.config-form').forEach(form => {
+                form.classList.remove('active');
+            });
+            document.getElementById(`form-${provider}`).classList.add('active');
+
+            // 隐藏测试结果
+            document.getElementById('testResult').style.display = 'none';
+        }
+
+        function getConfigFromForm() {
+            if (currentProvider === 'deepseek') {
+                return {
+                    provider: 'deepseek',
+                    api_key: document.getElementById('ds-apikey').value,
+                    url: document.getElementById('ds-url').value,
+                    model: document.getElementById('ds-model').value
+                };
+            } else if (currentProvider === 'ollama') {
+                return {
+                    provider: 'ollama',
+                    url: document.getElementById('ollama-url').value,
+                    model: document.getElementById('ollama-model').value
+                };
+            } else if (currentProvider === 'openai') {
+                return {
+                    provider: 'openai',
+                    api_key: document.getElementById('openai-apikey').value,
+                    url: document.getElementById('openai-url').value,
+                    model: document.getElementById('openai-model').value
+                };
+            }
+        }
+
+        async function testConnection() {
+            const config = getConfigFromForm();
+            const resultDiv = document.getElementById('testResult');
+
+            resultDiv.className = 'test-result';
+            resultDiv.textContent = '测试中...';
+            resultDiv.style.display = 'block';
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/v1/config/test`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    resultDiv.className = 'test-result success';
+                    resultDiv.innerHTML = `连接成功<br>模型: ${data.model}<br>响应时间: ${data.response_time?.toFixed(0) || '-'}ms`;
+                    document.getElementById('currentLatency').textContent = `${data.response_time?.toFixed(0) || '-'}ms`;
+                } else {
+                    resultDiv.className = 'test-result error';
+                    resultDiv.textContent = `连接失败: ${data.error}`;
+                }
+            } catch (error) {
+                resultDiv.className = 'test-result error';
+                resultDiv.textContent = `请求失败: ${error.message}`;
+            }
+        }
+
+        async function saveConfig() {
+            const config = getConfigFromForm();
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/v1/config`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(config)
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    alert('配置已保存');
+                    loadCurrentConfig();
+                } else {
+                    alert('保存失败: ' + data.error);
+                }
+            } catch (error) {
+                alert('保存失败: ' + error.message);
+            }
+        }
+
+        async function resetConfig() {
+            if (!confirm('确定要重置配置吗？')) return;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/v1/config`, {
+                    method: 'DELETE'
+                });
+
+                const data = await response.json();
+
+                if (data.status === 'success') {
+                    alert('配置已重置');
+                    location.reload();
+                }
+            } catch (error) {
+                alert('重置失败: ' + error.message);
+            }
+        }
+
+        async function fetchOllamaModels() {
+            const url = document.getElementById('ollama-url').value || 'http://localhost:11434';
+            const listContainer = document.getElementById('ollamaModelList');
+
+            try {
+                const response = await fetch(`${url}/api/tags`);
+                const data = await response.json();
+
+                const models = data.models || [];
+                if (models.length === 0) {
+                    listContainer.innerHTML = '<div class="model-list-item">未找到模型</div>';
+                } else {
+                    listContainer.innerHTML = models.map(m => `
+                        <div class="model-list-item" onclick="selectOllamaModel('${m.name}')">${m.name}</div>
+                    `).join('');
+                }
+                listContainer.style.display = 'block';
+            } catch (error) {
+                listContainer.innerHTML = `<div class="model-list-item" style="color: #c62828;">获取失败: ${error.message}</div>`;
+                listContainer.style.display = 'block';
+            }
+        }
+
+        function selectOllamaModel(modelName) {
+            document.getElementById('ollama-model').value = modelName;
+            document.querySelectorAll('.model-list-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            event.target.classList.add('selected');
+        }
+    </script>
+</body>
+</html>

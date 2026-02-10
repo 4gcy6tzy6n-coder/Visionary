@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>iPhone远程语音输入 - Text2Loc</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        
+        .title {
+            color: #1a1a1a;
+            font-size: 24px;
+            font-weight: 600;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        .server-info {
+            background: #f8f9fa;
+            border: 1px solid #e5e5e5;
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 20px;
+            color: #666;
+            font-size: 12px;
+            font-family: monospace;
+        }
+        
+        .status {
+            background: #ffffff;
+            border: 1px solid #e5e5e5;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .status-text {
+            color: #1a1a1a;
+            font-size: 16px;
+        }
+        
+        .mic-button {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: #10a37f;
+            border: none;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 12px rgba(16,163,127,0.3);
+            transition: all 0.3s ease;
+            margin: 0 auto 30px;
+        }
+        
+        .mic-button:hover {
+            transform: scale(1.05);
+        }
+        
+        .mic-button:active {
+            transform: scale(0.95);
+        }
+        
+        .mic-button.listening {
+            background: #0d8a68;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(16, 163, 127, 0.6); }
+            50% { box-shadow: 0 0 0 20px rgba(16, 163, 127, 0); }
+        }
+        
+        .mic-icon {
+            width: 50px;
+            height: 50px;
+        }
+        
+        .result-box {
+            background: #ffffff;
+            border: 1px solid #e5e5e5;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            min-height: 100px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .result-text {
+            color: #1a1a1a;
+            font-size: 18px;
+            line-height: 1.6;
+            min-height: 60px;
+        }
+        
+        .result-placeholder {
+            color: #999;
+            font-size: 14px;
+        }
+        
+        .location-result {
+            background: #ffffff;
+            border: 1px solid #e5e5e5;
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 20px;
+            display: none;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+        
+        .location-result.show {
+            display: block;
+        }
+        
+        .result-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #10a37f;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .result-item {
+            margin-bottom: 12px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .result-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 4px;
+        }
+        
+        .result-value {
+            font-size: 14px;
+            color: #1a1a1a;
+            font-weight: 500;
+        }
+        
+        .coordinate {
+            display: inline-block;
+            background: #10a37f;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 13px;
+            margin-right: 8px;
+        }
+        
+        .send-btn {
+            width: 100%;
+            padding: 16px;
+            background: #10a37f;
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .send-btn:hover {
+            background: #0d8a6a;
+        }
+        
+        .send-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        .connection-info {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #f8f9fa;
+            border: 1px solid #e5e5e5;
+            color: #666;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">🎤 Text2Loc 语音输入</h1>
+        <p class="subtitle">使用iPhone语音输入，文本将同步到Mac</p>
+        
+        <div class="server-info" id="serverInfo">Mac服务器: 192.168.0.106:5050</div>
+        
+        <div class="status">
+            <p class="status-text" id="status">准备就绪，点击麦克风开始</p>
+        </div>
+        
+        <button class="mic-button" id="micBtn" onclick="toggleVoice()">
+            <svg class="mic-icon" viewBox="0 0 24 24" fill="#667eea" id="micIcon">
+                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z"/>
+                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z"/>
+            </svg>
+        </button>
+        
+        <div class="result-box">
+            <p class="result-text result-placeholder" id="result">识别到的文本将显示在这里...</p>
+        </div>
+        
+        <div class="location-result" id="locationResult">
+            <div class="result-title">
+                📍 定位结果
+            </div>
+            <div class="result-item">
+                <div class="result-label">Cell ID</div>
+                <div class="result-value" id="cellId">-</div>
+            </div>
+            <div class="result-item">
+                <div class="result-label">3D坐标</div>
+                <div class="result-value">
+                    <span class="coordinate" id="coordX">X: -</span>
+                    <span class="coordinate" id="coordY">Y: -</span>
+                </div>
+            </div>
+            <div class="result-item">
+                <div class="result-label">置信度</div>
+                <div class="result-value" id="confidence">-</div>
+            </div>
+            <div class="result-item">
+                <div class="result-label">处理时间</div>
+                <div class="result-value" id="processTime">-</div>
+            </div>
+        </div>
+        
+        <button class="send-btn" id="sendBtn" onclick="sendText()" disabled>发送到Mac</button>
+    </div>
+    
+    <div class="connection-info" id="connection">连接状态: 检查中...</div>
+    
+    <script>
+        let recognition;
+        let isListening = false;
+        let recognizedText = '';
+        
+        // 自动检测Mac IP地址（需要手动更新）
+        const MAC_API_URL = 'http://192.168.0.106:5050';
+        
+        // 检浓当前访问来源，自动选择API地址
+        function getApiBaseUrl() {
+            // 如果在移动设备上访问，优先使用内网IP
+            const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            const isLocalhost = window.location.hostname === 'localhost' || 
+                               window.location.hostname === '127.0.0.1';
+            
+            // 如果是通过内网穿透访问，使用当前URL的baseURL
+            if (!isLocalhost && window.location.protocol === 'https:') {
+                return window.location.origin;
+            }
+            
+            // 否则使用Mac内网IP
+            return MAC_API_URL;
+        }
+        
+        // 检查API连接
+        async function checkConnection() {
+            const apiBase = getApiBaseUrl();
+            try {
+                const response = await fetch(`${apiBase}/health`);
+                document.getElementById('connection').textContent = 
+                    '✅ Mac后端已连接';
+                return true;
+            } catch (e) {
+                document.getElementById('connection').textContent = 
+                    '❌ 无法连接Mac后端，请确保Mac上的服务已启动';
+                return false;
+            }
+        }
+        
+        // 初始化语音识别
+        function initSpeechRecognition() {
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            if (!SpeechRecognition) {
+                updateStatus('❌ 您的浏览器不支持语音识别');
+                return false;
+            }
+            
+            recognition = new SpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'zh-CN';
+            
+            recognition.onstart = () => {
+                isListening = true;
+                document.getElementById('micBtn').classList.add('listening');
+                document.getElementById('micIcon').querySelector('path').setAttribute('fill', 'white');
+                updateStatus('🎤 正在聆听...请说话');
+            };
+            
+            recognition.onresult = (event) => {
+                let interim = '';
+                let final = '';
+                
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        final += transcript;
+                    } else {
+                        interim += transcript;
+                    }
+                }
+                
+                if (final) {
+                    recognizedText = final;
+                    displayResult(final);
+                    lastSentText = final;
+                    updateStatus('✅ 识别完成');
+                    document.getElementById('sendBtn').disabled = false;
+                } else if (interim) {
+                    recognizedText = interim;
+                    displayResult(interim + '...');
+                }
+            };
+            
+            recognition.onerror = (event) => {
+                console.error('语音识别错误:', event.error);
+                if (event.error !== 'no-speech') {
+                    updateStatus('❌ 识别错误: ' + event.error);
+                }
+                stopListening();
+            };
+            
+            recognition.onend = () => {
+                if (isListening) {
+                    recognition.start(); // 持续监听
+                }
+            };
+            
+            return true;
+        }
+        
+        // 切换语音识别状态
+        function toggleVoice() {
+            if (!recognition) {
+                if (!initSpeechRecognition()) return;
+            }
+            
+            if (isListening) {
+                stopListening();
+            } else {
+                startListening();
+            }
+        }
+        
+        function startListening() {
+            try {
+                recognition.start();
+            } catch (e) {
+                console.error('启动识别失败:', e);
+                recognition = null;
+                initSpeechRecognition();
+                recognition.start();
+            }
+        }
+        
+        function stopListening() {
+            isListening = false;
+            if (recognition) {
+                recognition.stop();
+            }
+            document.getElementById('micBtn').classList.remove('listening');
+            document.getElementById('micIcon').querySelector('path').setAttribute('fill', '#667eea');
+        }
+        
+        // 显示识别结果
+        function displayResult(text) {
+            const resultEl = document.getElementById('result');
+            resultEl.textContent = text;
+            resultEl.classList.remove('result-placeholder');
+        }
+        
+        // 更新状态
+        function updateStatus(text) {
+            document.getElementById('status').textContent = text;
+        }
+        
+        // 发送文本到Mac
+        async function sendText() {
+            if (!recognizedText.trim()) {
+                updateStatus('⚠️ 没有可发送的文本');
+                return;
+            }
+            
+            const apiBase = getApiBaseUrl();
+            updateStatus('📡 正在发送到Mac...');
+            
+            // 隐藏之前的定位结果
+            document.getElementById('locationResult').classList.remove('show');
+            
+            try {
+                const response = await fetch(`${apiBase}/api/v1/remote-voice`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        text: recognizedText,
+                        timestamp: new Date().toISOString(),
+                        device: 'iPhone'
+                    })
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    
+                    if (data.status === 'success' && data.result) {
+                        updateStatus('✅ 定位分析完成！');
+                        
+                        // 显示完整的定位结果
+                        displayLocationResult(data.result);
+                        
+                        recognizedText = '';
+                        document.getElementById('sendBtn').disabled = true;
+                    } else {
+                        updateStatus('❌ 处理失败: ' + (data.error || '未知错误'));
+                    }
+                } else {
+                    updateStatus('❌ 发送失败，请重试');
+                }
+            } catch (e) {
+                console.error('发送失败:', e);
+                updateStatus('❌ 无法连接到Mac: ' + e.message);
+            }
+        }
+        
+        // 显示定位结果
+        function displayLocationResult(result) {
+            const locationResult = document.getElementById('locationResult');
+            
+            // 获取最终结果
+            const finalResult = result.final_result || {};
+            const processingTime = result.processing_time_ms || 0;
+            
+            // 更新Cell ID
+            document.getElementById('cellId').textContent = finalResult.cell_id || '未知';
+            
+            // 更新3D坐标
+            const x = finalResult.x !== undefined ? finalResult.x.toFixed(2) : '0.00';
+            const y = finalResult.y !== undefined ? finalResult.y.toFixed(2) : '0.00';
+            document.getElementById('coordX').textContent = `X: ${x}m`;
+            document.getElementById('coordY').textContent = `Y: ${y}m`;
+            
+            // 更新置信度
+            const confidence = finalResult.confidence || finalResult.score || 0;
+            const confidencePercent = (confidence * 100).toFixed(1);
+            document.getElementById('confidence').textContent = `${confidencePercent}%`;
+            
+            // 更新处理时间
+            document.getElementById('processTime').textContent = `${processingTime.toFixed(1)}ms`;
+            
+            // 显示定位结果区域
+            locationResult.classList.add('show');
+            
+            // 滚动到结果区域
+            setTimeout(() => {
+                locationResult.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 100);
+        }
+        
+        // 页面加载时检查连接
+        window.onload = function() {
+            checkConnection();
+        };
+    </script>
+</body>
+</html>

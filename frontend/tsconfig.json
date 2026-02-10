@@ -1,0 +1,111 @@
+{
+  "compilerOptions": {
+    /* 基本配置 */
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "skipLibCheck": true,
+
+    /* 模块解析配置 */
+    "moduleResolution": "bundler",
+    "allowImportingTsExtensions": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "@emotion/react",
+
+    /* 严格类型检查 */
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
+
+    /* 路径别名 */
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@api/*": ["src/api/*"],
+      "@components/*": ["src/components/*"],
+      "@features/*": ["src/features/*"],
+      "@hooks/*": ["src/hooks/*"],
+      "@stores/*": ["src/stores/*"],
+      "@types/*": ["src/types/*"],
+      "@utils/*": ["src/utils/*"],
+      "@styles/*": ["src/styles/*"],
+      "@assets/*": ["src/assets/*"]
+    },
+
+    /* 类型声明文件 */
+    "typeRoots": ["./node_modules/@types", "./src/types"],
+
+    /* 其他配置 */
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowJs": true,
+    "declaration": false,
+    "declarationMap": false,
+    "inlineSourceMap": false,
+    "inlineSources": false,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true,
+    "strictFunctionTypes": true,
+    "strictBindCallApply": true,
+    "strictPropertyInitialization": true,
+    "alwaysStrict": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "removeComments": true,
+    "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
+
+    /* 输出配置 */
+    "sourceMap": true,
+    "outDir": "./dist",
+    "preserveConstEnums": true,
+    "allowUmdGlobalAccess": false,
+    "moduleSuffixes": [],
+    "allowArbitraryExtensions": false,
+    "verbatimModuleSyntax": false,
+    "ignoreDeprecations": "5.0"
+  },
+
+  /* 包含的文件 */
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.tsx",
+    "src/**/*.js",
+    "src/**/*.jsx",
+    "vite.config.ts",
+    "vitest.config.ts",
+    "src/**/*.d.ts"
+  ],
+
+  /* 排除的文件 */
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build",
+    "coverage",
+    ".vscode",
+    ".github",
+    "*.config.js",
+    "*.config.ts"
+  ],
+
+  /* 引用其他配置 */
+  "references": [
+    { "path": "./tsconfig.node.json" }
+  ],
+
+  /* 编译选项 */
+  "compileOnSave": false,
+
+  /* TypeScript版本 */
+  "typescriptVersion": "5.0.0"
+}
